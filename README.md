@@ -9,7 +9,20 @@ MCP server and Claude Code skill for the [Krea.ai](https://krea.ai) API.
 - **Claude Code Skill** (`.claude/skills/krea-api.md`) — Comprehensive reference for Claude Code to use the Krea API
 - **API Client** (`src/krea-client.js`) — Reusable JavaScript client for the Krea API
 
-## Setup
+## Use with Claude.ai (copy & paste)
+
+No code needed. Just paste a prompt into a Claude.ai Project and start generating.
+
+**[See CLAUDE_AI_SKILL.md for the full prompt and instructions](./CLAUDE_AI_SKILL.md)**
+
+1. Create a Project on [claude.ai](https://claude.ai)
+2. Paste the prompt from `CLAUDE_AI_SKILL.md` into **Custom Instructions**
+3. Replace `YOUR_API_TOKEN` with your token from [krea.ai/settings/api-tokens](https://krea.ai/settings/api-tokens)
+4. Chat: *"Generate an image of a futuristic city"*
+
+---
+
+## Setup (MCP Server)
 
 ### 1. Get an API Token
 
