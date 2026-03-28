@@ -182,8 +182,9 @@ If neither is available, the script exits with an error message.
 
 **Common failures:**
 - `Error: No API key` → set `KREA_API_TOKEN` or pass `--api-key`
-- `402 Insufficient credits` → top up compute units at krea.ai
-- `429 Too many requests` → concurrent job limit reached, wait and retry
+- `402 Insufficient credits` → top up compute units at https://krea.ai/settings/billing
+- `402 This model requires a higher plan` → model needs a paid plan upgrade at https://krea.ai/settings/billing
+- `429 Too many requests` → concurrent job limit reached; scripts auto-retry up to 3 times with backoff
 - `Job failed` → check prompt for content moderation issues, try different wording
 
 ## Filename Generation

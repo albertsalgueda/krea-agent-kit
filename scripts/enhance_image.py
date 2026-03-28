@@ -6,13 +6,12 @@
 """Enhance/upscale images using the Krea.ai API."""
 
 import argparse
-import json
 import os
 import sys
-import time
-import requests
 
-API_BASE = "https://api.krea.ai"
+# Allow importing from the same directory when run via uv
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from krea_helpers import get_api_key, api_post, poll_job, download_file, ensure_image_url, output_path
 
 KNOWN_ENHANCERS = {
     "topaz": "/generate/enhance/topaz/standard-enhance",
@@ -20,65 +19,32 @@ KNOWN_ENHANCERS = {
     "topaz-bloom": "/generate/enhance/topaz/bloom-enhance",
 }
 
+DEFAULT_ENHANCER_MODELS = {
+    "topaz": "Standard V2",
+    "topaz-generative": "Redefine",
+    "topaz-bloom": "Reimagine",
+}
+
 
 def resolve_enhancer(enhancer_arg):
-    """Resolve enhancer to endpoint. Accepts shorthand, full path, or raw name."""
     if enhancer_arg in KNOWN_ENHANCERS:
-        return KNOWN_ENHANCERS[enhancer_arg]
+        return enhancer_arg, KNOWN_ENHANCERS[enhancer_arg]
     if enhancer_arg.startswith("/generate/enhance/"):
-        return enhancer_arg
-    for endpoint in KNOWN_ENHANCERS.values():
+        return enhancer_arg, enhancer_arg
+    for name, endpoint in KNOWN_ENHANCERS.items():
         if endpoint.endswith("/" + enhancer_arg):
-            return endpoint
+            return name, endpoint
     print(f"Warning: Unknown enhancer '{enhancer_arg}', trying as endpoint path", file=sys.stderr)
-    return f"/generate/enhance/{enhancer_arg}"
-
-
-def get_api_key(args_key):
-    key = args_key or os.environ.get("KREA_API_TOKEN")
-    if not key:
-        print("Error: No API key provided. Set KREA_API_TOKEN or pass --api-key", file=sys.stderr)
-        sys.exit(1)
-    return key
-
-
-def poll_job(job_id, api_key, interval=5, timeout=600):
-    headers = {"Authorization": f"Bearer {api_key}"}
-    start = time.time()
-    while time.time() - start < timeout:
-        r = requests.get(f"{API_BASE}/jobs/{job_id}", headers=headers)
-        r.raise_for_status()
-        job = r.json()
-        status = job.get("status", "")
-        if status == "completed":
-            return job
-        if status == "failed":
-            print(f"Error: Job failed: {json.dumps(job.get('result', {}))}", file=sys.stderr)
-            sys.exit(1)
-        if status == "cancelled":
-            print("Error: Job was cancelled", file=sys.stderr)
-            sys.exit(1)
-        print(f"  Status: {status}...", file=sys.stderr)
-        time.sleep(interval)
-    print(f"Error: Job timed out after {timeout}s", file=sys.stderr)
-    sys.exit(1)
-
-
-def download_file(url, filename):
-    r = requests.get(url, stream=True)
-    r.raise_for_status()
-    with open(filename, "wb") as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            f.write(chunk)
+    return enhancer_arg, f"/generate/enhance/{enhancer_arg}"
 
 
 def main():
     parser = argparse.ArgumentParser(description="Enhance/upscale images with Krea AI")
-    parser.add_argument("--image-url", required=True, help="Source image URL")
+    parser.add_argument("--image-url", required=True, help="Source image URL or local file path")
     parser.add_argument("--filename", required=True, help="Output filename")
     parser.add_argument("--width", type=int, required=True, help="Target width")
     parser.add_argument("--height", type=int, required=True, help="Target height")
-    parser.add_argument("--enhancer", default="topaz", help="Enhancer ID (e.g. topaz, topaz-generative, topaz-bloom) or full endpoint path")
+    parser.add_argument("--enhancer", default="topaz", help="Enhancer ID or full endpoint path")
     parser.add_argument("--enhancer-model", help="Sub-model (e.g. 'Standard V2', 'Redefine', 'Reimagine')")
     parser.add_argument("--prompt", help="Enhancement guidance prompt")
     parser.add_argument("--creativity", type=int, help="Creativity level (generative: 1-6, bloom: 1-9)")
@@ -87,19 +53,22 @@ def main():
     parser.add_argument("--denoise", type=float, help="Denoising 0-1")
     parser.add_argument("--scaling-factor", type=int, help="Upscaling factor 1-32")
     parser.add_argument("--output-format", choices=["png", "jpg", "webp"], help="Output format")
+    parser.add_argument("--output-dir", help="Output directory (default: cwd)")
     parser.add_argument("--api-key", help="Krea API token")
     args = parser.parse_args()
 
     api_key = get_api_key(args.api_key)
-    endpoint = resolve_enhancer(args.enhancer)
+    enhancer_name, endpoint = resolve_enhancer(args.enhancer)
+
+    # Resolve local files to URLs
+    image_url = ensure_image_url(args.image_url, api_key)
 
     body = {
-        "image_url": args.image_url,
+        "image_url": image_url,
         "width": args.width,
         "height": args.height,
+        "model": args.enhancer_model or DEFAULT_ENHANCER_MODELS.get(enhancer_name, "Standard V2"),
     }
-    if args.enhancer_model:
-        body["model"] = args.enhancer_model
     if args.prompt:
         body["prompt"] = args.prompt
     if args.creativity is not None:
@@ -116,32 +85,22 @@ def main():
     if args.output_format:
         body["output_format"] = args.output_format
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-
-    print(f"Enhancing image with {args.enhancer}...", file=sys.stderr)
-    r = requests.post(f"{API_BASE}{endpoint}", headers=headers, json=body)
-    if not r.ok:
-        print(f"Error: API returned {r.status_code}: {r.text}", file=sys.stderr)
-        sys.exit(1)
-
-    job = r.json()
+    print(f"Enhancing image with {enhancer_name}...", file=sys.stderr)
+    job = api_post(api_key, endpoint, body)
     job_id = job.get("job_id")
     print(f"Job created: {job_id}", file=sys.stderr)
 
-    result = poll_job(job_id, api_key)
+    result = poll_job(api_key, job_id, interval=5)
     urls = result.get("result", {}).get("urls", [])
 
     if not urls:
         print("Error: No image URL in result", file=sys.stderr)
         sys.exit(1)
 
-    download_file(urls[0], args.filename)
-    out_path = os.path.abspath(args.filename)
-    print(out_path)
-    print(f"Saved: {out_path}", file=sys.stderr)
+    out = output_path(args.filename, args.output_dir)
+    path = download_file(urls[0], out)
+    print(path)
+    print(f"Saved: {path}", file=sys.stderr)
 
 
 if __name__ == "__main__":

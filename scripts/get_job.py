@@ -9,17 +9,9 @@ import argparse
 import json
 import os
 import sys
-import requests
 
-API_BASE = "https://api.krea.ai"
-
-
-def get_api_key(args_key):
-    key = args_key or os.environ.get("KREA_API_TOKEN")
-    if not key:
-        print("Error: No API key provided. Set KREA_API_TOKEN or pass --api-key", file=sys.stderr)
-        sys.exit(1)
-    return key
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from krea_helpers import get_api_key, api_get
 
 
 def main():
@@ -29,14 +21,8 @@ def main():
     args = parser.parse_args()
 
     api_key = get_api_key(args.api_key)
-    headers = {"Authorization": f"Bearer {api_key}"}
-
-    r = requests.get(f"{API_BASE}/jobs/{args.job_id}", headers=headers)
-    if not r.ok:
-        print(f"Error: API returned {r.status_code}: {r.text}", file=sys.stderr)
-        sys.exit(1)
-
-    print(json.dumps(r.json(), indent=2))
+    job = api_get(api_key, f"/jobs/{args.job_id}")
+    print(json.dumps(job, indent=2))
 
 
 if __name__ == "__main__":
