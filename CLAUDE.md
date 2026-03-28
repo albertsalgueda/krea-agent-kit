@@ -1,20 +1,16 @@
-# Krea Agent Kit
+# Krea AI — ClawHub Skill
 
-This repository provides an MCP server and Claude Code skill for the Krea.ai API.
+This repository is a ClawHub/OpenClaw skill for the Krea.ai API.
 
 ## Project Structure
 
-- `src/mcp-server.js` — MCP server (stdio transport) exposing all Krea API tools
-- `src/krea-client.js` — Reusable API client class
-- `.claude/skills/krea-api.md` — Claude Code skill with full API reference
+- `SKILL.md` — Skill instructions (required by ClawHub)
+- `scripts/` — Python scripts for image/video generation, enhancement, pipelines
 
 ## Environment
 
 - `KREA_API_TOKEN` — Required. Get one at https://krea.ai/settings/api-tokens
 
-## Running
+## Publishing to ClawHub
 
-```bash
-npm install
-KREA_API_TOKEN=xxx node src/mcp-server.js
-```
+Drag this folder to https://clawhub.ai/upload — it contains `SKILL.md` at root + `scripts/`.
