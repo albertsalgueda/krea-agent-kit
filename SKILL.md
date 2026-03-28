@@ -28,6 +28,11 @@ uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "https://..." -
 uv run ~/.codex/skills/krea/scripts/list_models.py [--type image|video|enhance]
 ```
 
+**Run a multi-step pipeline:**
+```bash
+uv run ~/.codex/skills/krea/scripts/pipeline.py --pipeline pipeline.json [--api-key KEY]
+```
+
 **Check job status:**
 ```bash
 uv run ~/.codex/skills/krea/scripts/get_job.py --job-id "uuid" [--api-key KEY]
@@ -242,77 +247,172 @@ uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "https://exampl
 uv run ~/.codex/skills/krea/scripts/list_models.py --type image
 ```
 
-## Workflows
+## Pipelines (Multi-Step Workflows)
 
-Chain multiple scripts together to create complex creative pipelines. When a script outputs a file path, use that path as input for the next step.
+Use `pipeline.py` to chain multiple steps automatically. Each step's output feeds into the next. Write a JSON pipeline and run it in one command.
 
-### Generate → Upscale (draft to final)
+### Pipeline JSON Format
 
-Generate a draft image cheaply, then upscale the final version:
-```bash
-# 1. Draft with flux (~5 CU, ~5s)
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "a futuristic Tokyo street at night, neon signs, rain reflections" --filename "tokyo-draft.png" --model flux
-
-# 2. Upscale to 4K with Topaz (~51 CU)
-uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "file://tokyo-draft.png" --filename "tokyo-4k.png" --width 4096 --height 4096 --enhancer topaz
+```json
+{
+  "steps": [
+    {
+      "action": "generate_image | generate_video | enhance | fan_out",
+      "model": "model-id",
+      "prompt": "...",
+      "filename": "base-name",
+      "use_previous": true,
+      "...": "any other model-specific params"
+    }
+  ]
+}
 ```
 
-### Generate → Animate (image to video)
+**Actions:**
+- `generate_image` — generate an image
+- `generate_video` — generate a video
+- `enhance` — upscale/enhance an image
+- `fan_out` — run a sub-step for EACH result from the previous step (branching)
 
-Generate a hero image, then bring it to life as a video:
-```bash
-# 1. Generate high-quality image
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "a majestic dragon perched on a cliff at sunset" --filename "dragon.png" --model nano-banana-pro
+**Special fields:**
+- `use_previous: true` — use the output URL(s) from the previous step as input
+- `fan_out` has a `step` field containing the template to run per source URL
+- In fan_out prompts, `{i}` is replaced with the iteration number (1, 2, 3...)
 
-# 2. Animate it into a 5s video (use the Krea-hosted URL from step 1 output)
-uv run ~/.codex/skills/krea/scripts/generate_video.py --prompt "the dragon spreads its wings and takes flight, camera slowly zooms out" --filename "dragon-flight.mp4" --model kling-2.5 --start-image "RESULT_URL_FROM_STEP_1" --duration 5
+### Example: Generate → 4 Angles → 4 Videos
+
+Generate a concept image, create 4 angle variations, then animate each one:
+
+```json
+{
+  "steps": [
+    {
+      "action": "generate_image",
+      "model": "flux",
+      "prompt": "a red sports car on an empty highway, golden hour, cinematic",
+      "filename": "car-concept"
+    },
+    {
+      "action": "fan_out",
+      "use_previous": true,
+      "step": {
+        "action": "generate_image",
+        "model": "gpt-image",
+        "prompt": "same red sports car, angle {i} of 4: front three-quarter view at angle {i}, professional automotive photography, studio lighting, white background",
+        "filename": "car-angle-{i}"
+      }
+    },
+    {
+      "action": "fan_out",
+      "use_previous": true,
+      "step": {
+        "action": "generate_video",
+        "model": "kling-2.5",
+        "prompt": "the red sports car slowly rotates on a turntable, smooth motion, studio lighting",
+        "duration": 5,
+        "filename": "car-spin-{i}"
+      }
+    }
+  ]
+}
 ```
 
-### Style Transfer → Upscale
-
-Transform a photo into a different style, then upscale:
+Run it:
 ```bash
-# 1. Style transfer with image-to-image
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "transform into Studio Ghibli anime style, soft colors, hand-painted look" --filename "ghibli-version.png" --image-url "https://example.com/photo.jpg" --model gpt-image
-
-# 2. Creative upscale with generative enhancement
-uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "file://ghibli-version.png" --filename "ghibli-4k.png" --width 4096 --height 4096 --enhancer topaz-generative --creativity 4
+uv run ~/.codex/skills/krea/scripts/pipeline.py --pipeline car-pipeline.json
 ```
 
-### Batch Variations → Pick Best → Upscale → Animate
+### Example: Generate → Upscale → Animate with Audio
 
-Full creative pipeline:
-```bash
-# 1. Generate 4 variations cheaply
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "cyberpunk samurai in neon-lit alley" --filename "samurai.png" --model flux --batch-size 4
-
-# 2. User picks their favorite (e.g. samurai-3.png)
-
-# 3. Upscale the chosen one
-uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "file://samurai-3.png" --filename "samurai-final.png" --width 4096 --height 4096 --enhancer topaz
-
-# 4. Animate it
-uv run ~/.codex/skills/krea/scripts/generate_video.py --prompt "the samurai draws their sword, neon lights flicker, slow cinematic camera push-in" --filename "samurai-cinematic.mp4" --model veo-3 --start-image "RESULT_URL" --duration 8 --generate-audio
+```json
+{
+  "steps": [
+    {
+      "action": "generate_image",
+      "model": "nano-banana-pro",
+      "prompt": "a majestic dragon perched on a cliff overlooking a stormy ocean",
+      "filename": "dragon"
+    },
+    {
+      "action": "enhance",
+      "use_previous": true,
+      "enhancer": "topaz-generative",
+      "width": 4096,
+      "height": 4096,
+      "creativity": 3,
+      "filename": "dragon-4k"
+    },
+    {
+      "action": "generate_video",
+      "use_previous": true,
+      "model": "veo-3",
+      "prompt": "the dragon spreads its wings and roars, lightning strikes, waves crash below, epic cinematic",
+      "duration": 8,
+      "generateAudio": true,
+      "filename": "dragon-epic"
+    }
+  ]
+}
 ```
 
-### Multi-angle Product Shots
+### Example: Product Photography Pipeline
 
-Generate consistent product imagery from different angles:
-```bash
-# Front view
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "sleek wireless headphones on white background, front view, product photography, studio lighting" --filename "headphones-front.png" --model gpt-image --seed 42
+Generate hero shot → 4 style variations → upscale all:
 
-# Side view (same seed for consistency)
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "sleek wireless headphones on white background, side view, product photography, studio lighting" --filename "headphones-side.png" --model gpt-image --seed 42
-
-# Lifestyle shot
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "person wearing sleek wireless headphones, urban environment, golden hour" --filename "headphones-lifestyle.png" --model nano-banana-pro
+```json
+{
+  "steps": [
+    {
+      "action": "generate_image",
+      "model": "gpt-image",
+      "prompt": "minimalist perfume bottle, frosted glass, on marble surface, soft studio lighting, product photography",
+      "quality": "high",
+      "filename": "perfume-hero"
+    },
+    {
+      "action": "fan_out",
+      "use_previous": true,
+      "step": {
+        "action": "generate_image",
+        "model": "gpt-image",
+        "prompt": "same perfume bottle, variation {i}: 1=morning light with flowers, 2=dark moody with smoke, 3=underwater with bubbles, 4=floating in clouds",
+        "filename": "perfume-mood-{i}"
+      }
+    },
+    {
+      "action": "fan_out",
+      "use_previous": true,
+      "step": {
+        "action": "enhance",
+        "enhancer": "topaz",
+        "width": 4096,
+        "height": 4096,
+        "filename": "perfume-final-{i}"
+      }
+    }
+  ]
+}
 ```
 
-### Workflow tips
+### Example: Inline Pipeline (no JSON file needed)
 
-- **Use cheap models first** (`flux`, `z-image`) for prompt iteration, switch to expensive models (`gpt-image`, `nano-banana-pro`) only when the prompt is locked
-- **Chain image → video**: generate a still frame first, then animate with `--start-image` for much better video results than text-to-video alone
-- **Upscale last**: always generate at default resolution and upscale as the final step — it's cheaper and gives better results
-- **Use seeds**: set `--seed` to get reproducible results when iterating on prompts
-- **Batch for exploration**: use `--batch-size 4` to generate variations and let the user pick
+For quick pipelines, pass JSON directly:
+```bash
+uv run ~/.codex/skills/krea/scripts/pipeline.py --pipeline '{"steps":[{"action":"generate_image","model":"flux","prompt":"a cat astronaut","filename":"cat"},{"action":"enhance","use_previous":true,"enhancer":"topaz","width":4096,"height":4096,"filename":"cat-4k"}]}'
+```
+
+### Building Pipelines for Users
+
+When a user asks for something complex like "generate a product shot from 4 angles and make videos of each":
+
+1. Write a pipeline JSON with the right steps
+2. Save it to a `.json` file in the current directory
+3. Run it with `pipeline.py --pipeline file.json`
+4. Show the user the saved file paths when done
+
+**Tips:**
+- Use `fan_out` to branch — it runs the sub-step once per result from the previous step
+- `use_previous: true` chains steps automatically
+- Start cheap (`flux`) for concept, switch to quality (`gpt-image`, `nano-banana-pro`) for finals
+- Upscale as the last step before video — cheaper and better quality
+- Use `{i}` in prompts inside `fan_out` to vary the prompt per iteration
