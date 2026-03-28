@@ -1,43 +1,78 @@
 const BASE_URL = "https://api.krea.ai";
+const OPENAPI_URL = "https://api.krea.ai/openapi.json";
 
-export const IMAGE_MODELS = {
-  "z-image":           { endpoint: "/generate/image/z-image/z-image",             provider: "Z-Image",    cu: 3,   time: "~5s",   capabilities: ["text-to-image"], description: "Fastest model. Realistic, low diversity" },
-  "flux":              { endpoint: "/generate/image/bfl/flux-1-dev",              provider: "BFL",        cu: 5,   time: "~5s",   capabilities: ["text-to-image", "image-to-image", "styles/LoRAs"], description: "Fast and cheap. Best for LoRAs" },
-  "flux-kontext":      { endpoint: "/generate/image/bfl/flux-1-kontext-dev",      provider: "BFL",        cu: 9,   time: "~5s",   capabilities: ["text-to-image", "image-to-image"], description: "Flux with context-aware editing" },
-  "qwen":              { endpoint: "/generate/image/qwen/2512",                   provider: "Qwen",       cu: 9,   time: "~15s",  capabilities: ["text-to-image"], description: "Good quality at low cost" },
-  "imagen-4-fast":     { endpoint: "/generate/image/google/imagen-4-fast",        provider: "Google",     cu: 16,  time: "~17s",  capabilities: ["text-to-image"], description: "Fast Imagen 4 variant" },
-  "ideogram-2-turbo":  { endpoint: "/generate/image/ideogram/ideogram-2-turbo",   provider: "Ideogram",   cu: 20,  time: "~8s",   capabilities: ["text-to-image"], description: "Fast with good typography" },
-  "seedream-4":        { endpoint: "/generate/image/bytedance/seedream-4",        provider: "ByteDance",  cu: 24,  time: "~20s",  capabilities: ["text-to-image", "image-to-image"], description: "Photorealistic, flexible resolution" },
-  "seedream-5-lite":   { endpoint: "/generate/image/bytedance/seedream-5-lite",   provider: "ByteDance",  cu: 28,  time: "~20s",  capabilities: ["text-to-image", "image-to-image"], description: "Latest Seedream, lightweight" },
-  "flux-pro":          { endpoint: "/generate/image/bfl/flux-1.1-pro",            provider: "BFL",        cu: 31,  time: "~11s",  capabilities: ["text-to-image", "image-to-image", "styles/LoRAs"], description: "Higher quality Flux" },
-  "nano-banana":       { endpoint: "/generate/image/google/nano-banana",          provider: "Google",     cu: 32,  time: "~10s",  capabilities: ["text-to-image", "image-to-image"], description: "Good balance of speed and quality" },
-  "imagen-3":          { endpoint: "/generate/image/google/imagen-3",             provider: "Google",     cu: 32,  time: "~32s",  capabilities: ["text-to-image"], description: "Google Imagen 3" },
-  "imagen-4":          { endpoint: "/generate/image/google/imagen-4",             provider: "Google",     cu: 32,  time: "~32s",  capabilities: ["text-to-image"], description: "Google Imagen 4" },
-  "runway-gen4":       { endpoint: "/generate/image/runway/gen-4",                provider: "Runway",     cu: 40,  time: "~60s",  capabilities: ["image-to-image"], description: "Requires reference images" },
-  "flux-pro-ultra":    { endpoint: "/generate/image/bfl/flux-1.1-pro-ultra",      provider: "BFL",        cu: 47,  time: "~18s",  capabilities: ["text-to-image", "image-to-image", "styles/LoRAs"], description: "Highest quality Flux" },
-  "imagen-4-ultra":    { endpoint: "/generate/image/google/imagen-4-ultra",       provider: "Google",     cu: 47,  time: "~30s",  capabilities: ["text-to-image"], description: "Highest quality Imagen" },
-  "nano-banana-flash": { endpoint: "/generate/image/google/nano-banana-flash",    provider: "Google",     cu: 48,  time: "~15s",  capabilities: ["text-to-image", "image-to-image"], description: "Fast Nano Banana variant" },
-  "ideogram-3":        { endpoint: "/generate/image/ideogram/ideogram-3",         provider: "Ideogram",   cu: 54,  time: "~18s",  capabilities: ["text-to-image", "styles"], description: "Best typography and text rendering" },
-  "nano-banana-pro":   { endpoint: "/generate/image/google/nano-banana-pro",      provider: "Google",     cu: 119, time: "~30s",  capabilities: ["text-to-image", "image-to-image"], description: "Superior photorealistic detail" },
-  "seedream-3":        { endpoint: "/generate/image/bytedance/seedream-3",        provider: "ByteDance",  cu: null, time: "varies", capabilities: ["text-to-image", "image-to-image"], description: "ByteDance Seedream 3" },
-  "gpt-image":         { endpoint: "/generate/image/openai/gpt-image",            provider: "OpenAI",     cu: 184, time: "~60s",  capabilities: ["text-to-image", "image-to-image", "styles/LoRAs"], description: "Highest quality, best prompt adherence" },
-};
+// Model registries — populated dynamically from the OpenAPI spec at startup
+export let IMAGE_MODELS = {};
+export let VIDEO_MODELS = {};
+export let ENHANCERS = {};
 
-export const VIDEO_MODELS = {
-  "kling-1.0":   { endpoint: "/generate/video/kling/kling-1.0",     provider: "Kling",   cu: 282,  time: "~289s (5s video)",  capabilities: ["text-to-video", "image-to-video", "camera-control"], description: "High control, 5-10s duration" },
-  "kling-1.5":   { endpoint: "/generate/video/kling/kling-1.5",     provider: "Kling",   cu: null, time: "varies",            capabilities: ["text-to-video", "image-to-video", "camera-control"], description: "Quality-focused, complex scenes" },
-  "kling-2.5":   { endpoint: "/generate/video/kling/kling-2.5",     provider: "Kling",   cu: null, time: "varies",            capabilities: ["text-to-video", "image-to-video", "camera-control"], description: "Advanced motion control, realistic physics" },
-  "veo-3":       { endpoint: "/generate/video/google/veo-3",        provider: "Google",  cu: 1017, time: "~65-128s",          capabilities: ["text-to-video", "image-to-video", "audio"], description: "High quality, can generate audio" },
-  "veo-3.1":     { endpoint: "/generate/video/google/veo-3.1",      provider: "Google",  cu: null, time: "varies",            capabilities: ["text-to-video", "image-to-video"], description: "Exceptional prompt adherence, cinematic" },
-  "hailuo-2.3":  { endpoint: "/generate/video/hailuo/hailuo-2.3",   provider: "Hailuo",  cu: null, time: "varies",            capabilities: ["text-to-video", "image-to-video"], description: "Fast, smooth motion, natural transitions" },
-  "wan-2.5":     { endpoint: "/generate/video/alibaba/wan-2.5",     provider: "Alibaba", cu: 569,  time: "~180s",             capabilities: ["text-to-video", "image-to-video"], description: "High-res with style control" },
-};
+/**
+ * Fetch available models from the live Krea OpenAPI spec.
+ * Populates IMAGE_MODELS, VIDEO_MODELS, and ENHANCERS exports.
+ */
+export async function fetchModelRegistry() {
+  const res = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`Failed to fetch OpenAPI spec: ${res.status}`);
+  const spec = await res.json();
 
-export const ENHANCERS = {
-  "topaz":            { endpoint: "/generate/enhance/topaz/standard-enhance",    cu: 51,  time: "~19s",  maxResolution: "22K", description: "Faithful upscaler. Models: Standard V2, Low Resolution V2, CGI, High Fidelity V2, Text Refine" },
-  "topaz-generative": { endpoint: "/generate/enhance/topaz/generative-enhance",  cu: 137, time: "~96s",  maxResolution: "16K", description: "Creative enhancement. Models: Redefine, Recovery, Recovery V2, Reimagine" },
-  "topaz-bloom":      { endpoint: "/generate/enhance/topaz/bloom-enhance",       cu: 256, time: "~132s", maxResolution: "10K", description: "Creative details and upscaling. Model: Reimagine" },
-};
+  const imageModels = {};
+  const videoModels = {};
+  const enhancers = {};
+
+  for (const [path, methods] of Object.entries(spec.paths || {})) {
+    const post = methods.post;
+    if (!post) continue;
+
+    const description = post.description || post.summary || "";
+
+    // Extract compute units and time from description
+    const cuMatch = description.match(/~?(\d+)\s*(?:CU|compute units)/i);
+    const timeMatch = description.match(/~?(\d+)\s*(?:s|seconds)/i);
+    const cu = cuMatch ? parseInt(cuMatch[1]) : null;
+    const time = timeMatch ? `~${timeMatch[1]}s` : null;
+
+    // Extract parameters from request body schema
+    const bodySchema = post.requestBody?.content?.["application/json"]?.schema || {};
+    const params = Object.keys(bodySchema.properties || {});
+
+    if (path.startsWith("/generate/image/")) {
+      const parts = path.replace("/generate/image/", "").split("/");
+      const provider = parts[0] || "";
+      const modelName = parts[1] || parts[0];
+      imageModels[modelName] = {
+        endpoint: path, provider, cu, time,
+        parameters: params,
+        description: description.split(".")[0],
+      };
+    } else if (path.startsWith("/generate/video/")) {
+      const parts = path.replace("/generate/video/", "").split("/");
+      const provider = parts[0] || "";
+      const modelName = parts[1] || parts[0];
+      videoModels[modelName] = {
+        endpoint: path, provider, cu, time,
+        parameters: params,
+        description: description.split(".")[0],
+      };
+    } else if (path.startsWith("/generate/enhance/")) {
+      const parts = path.replace("/generate/enhance/", "").split("/");
+      const provider = parts[0] || "";
+      const modelName = parts[1] || parts[0];
+      const id = provider !== modelName ? `${provider}-${modelName}` : modelName;
+      enhancers[id] = {
+        endpoint: path, provider, cu, time,
+        parameters: params,
+        description: description.split(".")[0],
+      };
+    }
+  }
+
+  // Update the module-level exports
+  IMAGE_MODELS = imageModels;
+  VIDEO_MODELS = videoModels;
+  ENHANCERS = enhancers;
+
+  return { imageModels, videoModels, enhancers };
+}
 
 export class KreaClient {
   constructor(apiToken) {
@@ -45,6 +80,11 @@ export class KreaClient {
       throw new Error("KREA_API_TOKEN is required. Get one at https://krea.ai/settings/api-tokens");
     }
     this.apiToken = apiToken;
+  }
+
+  /** Fetch models from OpenAPI spec. Call once at startup. */
+  async init() {
+    await fetchModelRegistry();
   }
 
   async request(method, path, body = null, webhookUrl = null) {

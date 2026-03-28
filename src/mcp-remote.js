@@ -33,7 +33,7 @@ function registerKreaTools(server, client) {
 
   server.tool(
     "list_models",
-    "List all available Krea AI models with their capabilities, compute unit costs, and estimated generation times. Use this to discover which models are available and pick the right one for your task.",
+    "List all available Krea AI models with their capabilities, compute unit costs, and estimated generation times. Use this FIRST to discover which models are available before generating.",
     {
       type: z.enum(["image", "video", "enhance", "all"]).optional().describe("Filter by model type. Defaults to 'all'"),
     },
@@ -44,19 +44,19 @@ function registerKreaTools(server, client) {
       if (showType === "all" || showType === "image") {
         result.image_models = Object.entries(IMAGE_MODELS).map(([id, m]) => ({
           id, provider: m.provider, compute_units: m.cu, estimated_time: m.time,
-          capabilities: m.capabilities, description: m.description,
+          parameters: m.parameters, description: m.description,
         }));
       }
       if (showType === "all" || showType === "video") {
         result.video_models = Object.entries(VIDEO_MODELS).map(([id, m]) => ({
           id, provider: m.provider, compute_units: m.cu, estimated_time: m.time,
-          capabilities: m.capabilities, description: m.description,
+          parameters: m.parameters, description: m.description,
         }));
       }
       if (showType === "all" || showType === "enhance") {
         result.enhancers = Object.entries(ENHANCERS).map(([id, m]) => ({
           id, compute_units: m.cu, estimated_time: m.time,
-          max_resolution: m.maxResolution, description: m.description,
+          parameters: m.parameters, description: m.description,
         }));
       }
 
@@ -68,17 +68,9 @@ function registerKreaTools(server, client) {
 
   server.tool(
     "generate_image",
-    "Generate an image using Krea AI. Models: flux (~5 CU, ~5s), flux-kontext (~9 CU), flux-pro (~31 CU), flux-pro-ultra (~47 CU), nano-banana (~32 CU), nano-banana-flash (~48 CU), nano-banana-pro (~119 CU), imagen-3 (~32 CU), imagen-4 (~32 CU), imagen-4-fast (~16 CU), imagen-4-ultra (~47 CU), ideogram-2-turbo (~20 CU), ideogram-3 (~54 CU), gpt-image (~184 CU, ~60s), runway-gen4 (~40 CU), seedream-3, seedream-4 (~24 CU), seedream-5-lite (~28 CU), qwen (~9 CU), z-image (~3 CU, fastest)",
+    "Generate an image using Krea AI. Call list_models first to see available models and their costs.",
     {
-      model: z.enum([
-        "flux", "flux-kontext", "flux-pro", "flux-pro-ultra",
-        "nano-banana", "nano-banana-flash", "nano-banana-pro",
-        "imagen-3", "imagen-4", "imagen-4-fast", "imagen-4-ultra",
-        "ideogram-2-turbo", "ideogram-3",
-        "gpt-image", "runway-gen4",
-        "seedream-3", "seedream-4", "seedream-5-lite",
-        "qwen", "z-image",
-      ]).describe("Image model to use"),
+      model: z.string().describe("Image model ID (call list_models to see available models)"),
       prompt: z.string().describe("Text description of the image to generate"),
       width: z.number().min(512).max(4096).optional().describe("Image width in pixels"),
       height: z.number().min(512).max(4096).optional().describe("Image height in pixels"),
@@ -128,9 +120,9 @@ function registerKreaTools(server, client) {
 
   server.tool(
     "generate_video",
-    "Generate a video using Krea AI. Models: kling-1.0, kling-1.5, kling-2.5, veo-3 (~608-1281 CU), veo-3.1, hailuo-2.3, wan-2.5",
+    "Generate a video using Krea AI. Call list_models first to see available models and their costs.",
     {
-      model: z.enum(["kling-1.0", "kling-1.5", "kling-2.5", "veo-3", "veo-3.1", "hailuo-2.3", "wan-2.5"]).describe("Video model"),
+      model: z.string().describe("Video model ID (call list_models to see available models)"),
       prompt: z.string().describe("Text description of the video"),
       startImage: z.string().optional().describe("Starting image URL for image-to-video"),
       endImage: z.string().optional().describe("End frame image URL (kling only)"),
@@ -171,9 +163,9 @@ function registerKreaTools(server, client) {
 
   server.tool(
     "enhance_image",
-    "Upscale/enhance an image. Enhancers: topaz (faithful, 22K, ~51 CU), topaz-generative (creative, 16K, ~137 CU), topaz-bloom (creative details, 10K, ~256 CU)",
+    "Upscale/enhance an image using Krea AI. Call list_models with type 'enhance' to see available enhancers.",
     {
-      enhancer: z.enum(["topaz", "topaz-generative", "topaz-bloom"]).describe("Enhancement model"),
+      enhancer: z.string().describe("Enhancer ID (call list_models to see available enhancers)"),
       image_url: z.string().describe("URL of image to enhance"),
       width: z.number().min(1).max(32000).describe("Target width"),
       height: z.number().min(1).max(32000).describe("Target height"),
@@ -290,7 +282,7 @@ function registerKreaTools(server, client) {
     "train_style",
     "Train a custom LoRA style. Models: flux_dev, flux_schnell, wan, wan22, qwen, z-image",
     {
-      model: z.enum(["flux_dev", "flux_schnell", "wan", "wan22", "qwen", "z-image"]),
+      model: z.string().describe("Base model for training (e.g. flux_dev, flux_schnell, wan, qwen, z-image)"),
       name: z.string(),
       urls: z.array(z.string()).describe("Training image URLs (3-2000)"),
       type: z.enum(["Style", "Object", "Character", "Default"]).optional(),
@@ -407,6 +399,9 @@ function createServer(kreaClient) {
 // ── HTTP server setup ───────────────────────────────────
 
 const kreaClient = new KreaClient(process.env.KREA_API_TOKEN);
+await kreaClient.init().catch((err) => {
+  console.error(`Warning: could not fetch models from API: ${err.message}`);
+});
 const app = createMcpExpressApp();
 const transports = {};
 

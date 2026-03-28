@@ -1,69 +1,36 @@
 # Krea Agent Kit
 
-Generate images, videos, upscale/enhance with 20+ AI models through the [Krea.ai](https://krea.ai) API. Works as an **OpenClaw/ClawHub skill**, **Claude Code MCP server**, or standalone scripts.
+Generate images, videos, upscale/enhance with 20+ AI models through the [Krea.ai](https://krea.ai) API.
 
-## What's Included
+## Quick Start
 
-- **ClawHub Skill** (`SKILL.md` + `scripts/`) — Install in OpenClaw and start generating with one command
-- **MCP Server (stdio)** (`src/mcp-server.js`) — Local MCP server for Claude Code / Claude Desktop
-- **MCP Server (remote)** (`src/mcp-remote.js`) — HTTP MCP server for claude.ai remote integrations
-- **Claude Code Skill** (`.claude/skills/krea-api.md`) — Context skill for Claude Code
-- **API Client** (`src/krea-client.js`) — Reusable JavaScript client
+Get your API token at [krea.ai/settings/api-tokens](https://krea.ai/settings/api-tokens), then pick your provider:
 
-## Install in OpenClaw
+---
 
-Paste this prompt in OpenClaw (replace `YOUR_API_TOKEN` with your token from [krea.ai/settings/api-tokens](https://krea.ai/settings/api-tokens)):
+### Claude Code
+
+Paste this in Claude Code:
+
+```
+Clone https://github.com/albertsalgueda/krea-agent-kit, run npm install, and add it as an MCP server with my Krea API token: YOUR_API_TOKEN. Then generate an image of a cyberpunk city at night to test it works.
+```
+
+### OpenClaw / Codex
+
+Paste this in OpenClaw:
 
 ```
 Install this skill from https://github.com/albertsalgueda/krea-agent-kit — copy SKILL.md and the scripts/ folder to ~/.codex/skills/krea/. My Krea API key is: YOUR_API_TOKEN — set it as KREA_API_TOKEN environment variable. Then generate an image of a cyberpunk city at night to test it works.
 ```
 
-That's it. OpenClaw will install the skill, set up the API key, and generate a test image.
-
-### Manual install
+### Manual MCP Setup
 
 ```bash
-mkdir -p ~/.codex/skills/krea
-cp SKILL.md ~/.codex/skills/krea/
-cp -r scripts ~/.codex/skills/krea/
-export KREA_API_TOKEN="your-token-here"
+git clone https://github.com/albertsalgueda/krea-agent-kit && cd krea-agent-kit && npm install
 ```
 
-Then just ask:
-- *"Generate an image of a cyberpunk cat"*
-- *"Create a 5-second video of ocean waves"*
-- *"Upscale this image to 4K"*
-- *"What image models are available?"*
-
-## Available Scripts
-
-| Script | Description |
-|--------|-------------|
-| `scripts/generate_image.py` | Generate images with 20 models (Flux, Imagen, GPT Image, etc.) |
-| `scripts/generate_video.py` | Generate videos with Kling, Veo, Hailuo, Wan |
-| `scripts/enhance_image.py` | Upscale/enhance with Topaz (up to 22K resolution) |
-| `scripts/list_models.py` | List all models with costs and capabilities |
-| `scripts/get_job.py` | Check job status |
-
-All scripts use `uv run` (inline dependencies, no install needed).
-
----
-
-## Setup (MCP Server)
-
-### 1. Get an API Token
-
-Create a token at [krea.ai/settings/api-tokens](https://krea.ai/settings/api-tokens).
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3a. Use with Claude Code / Claude Desktop (stdio)
-
-Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/settings.json`):
+Add to your MCP config (`~/.claude/settings.json` or Claude Desktop config):
 
 ```json
 {
@@ -79,28 +46,18 @@ Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/
 }
 ```
 
-### 3b. Use with claude.ai (remote MCP)
+---
 
-Start the remote server:
+## What's Included
 
-```bash
-KREA_API_TOKEN=your-token-here node src/mcp-remote.js
-# or with a custom port:
-KREA_API_TOKEN=your-token-here PORT=8080 node src/mcp-remote.js
-```
+| Component | Description |
+|-----------|-------------|
+| `src/mcp-server.js` | MCP server (stdio) for Claude Code / Claude Desktop |
+| `.claude/skills/krea-api.md` | Claude Code skill with full API reference |
+| `src/krea-client.js` | Reusable JavaScript API client |
+| `scripts/` | Standalone Python scripts (use `uv run`, no install needed) |
 
-Then expose it publicly (e.g. with ngrok, Cloudflare Tunnel, or deploy to a server):
-
-```bash
-ngrok http 3001
-```
-
-In claude.ai, go to **Settings > Integrations > Add Custom Integration** and add:
-- **URL**: `https://your-ngrok-url.ngrok.app/mcp`
-
-The server supports both Streamable HTTP (`/mcp`) and legacy SSE (`/sse` + `/messages`).
-
-## Available MCP Tools
+## Available Tools
 
 | Tool | Description |
 |------|-------------|
@@ -113,7 +70,7 @@ The server supports both Streamable HTTP (`/mcp`) and legacy SSE (`/sse` + `/mes
 | `train_style` / `list_styles` / `get_style` / `update_style` / `share_style` | LoRA style management |
 | `get_node_app` / `execute_node_app` | Custom node apps |
 
-## Quick Examples
+## Examples
 
 ```
 > Generate a cyberpunk cityscape at night with neon lights

@@ -37,28 +37,7 @@ Available MCP tools: `generate_image`, `generate_video`, `enhance_image`, `get_j
 ### Endpoint Pattern
 `POST /generate/image/{provider}/{model}`
 
-### Available Models (sorted by speed/cost)
-| Model | Endpoint | ~CU | ~Time |
-|-------|----------|-----|-------|
-| Z-Image | `/generate/image/z-image/z-image` | 3 | 5s |
-| Flux | `/generate/image/bfl/flux-1-dev` | 5 | 5s |
-| Flux Kontext | `/generate/image/bfl/flux-1-kontext-dev` | 9 | 5s |
-| Qwen | `/generate/image/qwen/2512` | 9 | 15s |
-| Imagen 4 Fast | `/generate/image/google/imagen-4-fast` | 16 | 17s |
-| Ideogram 2 Turbo | `/generate/image/ideogram/ideogram-2-turbo` | 20 | 8s |
-| Seedream 4 | `/generate/image/bytedance/seedream-4` | 24 | 20s |
-| Seedream 5 Lite | `/generate/image/bytedance/seedream-5-lite` | 28 | 20s |
-| Flux Pro | `/generate/image/bfl/flux-1.1-pro` | 31 | 11s |
-| Nano Banana | `/generate/image/google/nano-banana` | 32 | 10s |
-| Imagen 3 | `/generate/image/google/imagen-3` | 32 | 32s |
-| Imagen 4 | `/generate/image/google/imagen-4` | 32 | 32s |
-| Runway Gen-4 | `/generate/image/runway/gen-4` | 40 | 60s |
-| Flux Pro Ultra | `/generate/image/bfl/flux-1.1-pro-ultra` | 47 | 18s |
-| Imagen 4 Ultra | `/generate/image/google/imagen-4-ultra` | 47 | 30s |
-| Nano Banana Flash | `/generate/image/google/nano-banana-flash` | 48 | 15s |
-| Ideogram 3 | `/generate/image/ideogram/ideogram-3` | 54 | 18s |
-| Nano Banana Pro | `/generate/image/google/nano-banana-pro` | 119 | 30s |
-| GPT Image | `/generate/image/openai/gpt-image` | 184 | 60s |
+**Models are dynamic.** Call `list_models` (MCP tool) or run `scripts/list_models.py` to see currently available image models with their costs and capabilities.
 
 ### Common Parameters
 ```json
@@ -110,16 +89,7 @@ curl -X POST https://api.krea.ai/generate/image/google/nano-banana-pro \
 ### Endpoint Pattern
 `POST /generate/video/{provider}/{model}`
 
-### Available Models
-| Model | Endpoint | ~CU | ~Time |
-|-------|----------|-----|-------|
-| Kling 1.0 | `/generate/video/kling/kling-1.0` | 282 (5s) | 289s |
-| Kling 1.5 | `/generate/video/kling/kling-1.5` | varies | varies |
-| Kling 2.5 | `/generate/video/kling/kling-2.5` | varies | varies |
-| Veo 3 | `/generate/video/google/veo-3` | 608-1281 | 65-128s |
-| Veo 3.1 | `/generate/video/google/veo-3.1` | varies | varies |
-| Hailuo 2.3 | `/generate/video/hailuo/hailuo-2.3` | varies | varies |
-| Wan 2.5 | `/generate/video/alibaba/wan-2.5` | 569 | ~180s |
+**Models are dynamic.** Call `list_models` (MCP tool) or run `scripts/list_models.py --type video` to see currently available video models.
 
 ### Video Parameters
 ```json
@@ -153,12 +123,10 @@ curl -X POST https://api.krea.ai/generate/video/google/veo-3 \
 
 ## Image Enhancement / Upscaling
 
-### Endpoints
-| Enhancer | Endpoint | ~CU | Max Resolution |
-|----------|----------|-----|----------------|
-| Topaz Standard | `/generate/enhance/topaz/standard-enhance` | 51 | 22K |
-| Topaz Generative | `/generate/enhance/topaz/generative-enhance` | 137 | 16K |
-| Topaz Bloom | `/generate/enhance/topaz/bloom-enhance` | 256 | 10K |
+### Endpoint Pattern
+`POST /generate/enhance/{provider}/{model}`
+
+**Enhancers are dynamic.** Call `list_models` (MCP tool) or run `scripts/list_models.py --type enhance` to see currently available enhancers.
 
 ### Topaz Standard Parameters
 ```json
@@ -273,7 +241,7 @@ Add `X-Webhook-URL` header to any generation request. The API sends a POST to yo
 Failed and cancelled jobs do NOT consume compute units.
 
 ## Best Practices
-1. Use `z-image` or `flux` for fast, cheap iterations; `gpt-image` or `nano-banana-pro` for highest quality
+1. Call `list_models` first to see available models sorted by cost — pick the cheapest that fits your needs
 2. Poll every 2-5s for images, 5-10s for videos
 3. Use webhooks for production to avoid polling overhead
 4. Use styles/LoRAs to maintain visual consistency across generations
