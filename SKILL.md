@@ -2,6 +2,8 @@
 
 Generate images, videos, upscale/enhance images, and train LoRA styles using the Krea.ai API. Supports 20+ image models (Flux, Imagen, GPT Image, Ideogram, Seedream...), 7 video models (Kling, Veo, Hailuo, Wan), and 3 upscalers (Topaz up to 22K).
 
+**IMPORTANT:** Do NOT invent model names. Before generating, run `list_models.py` to get the live list of available models from the Krea API. The tables below are a reference, but the API may have newer models. Scripts also accept full endpoint paths from `list_models.py --json` output (e.g. `--model /generate/image/google/imagen-4-ultra`).
+
 ## Usage
 
 Run scripts using absolute path (do NOT cd to skill directory first):
@@ -239,3 +241,78 @@ uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "https://exampl
 ```bash
 uv run ~/.codex/skills/krea/scripts/list_models.py --type image
 ```
+
+## Workflows
+
+Chain multiple scripts together to create complex creative pipelines. When a script outputs a file path, use that path as input for the next step.
+
+### Generate → Upscale (draft to final)
+
+Generate a draft image cheaply, then upscale the final version:
+```bash
+# 1. Draft with flux (~5 CU, ~5s)
+uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "a futuristic Tokyo street at night, neon signs, rain reflections" --filename "tokyo-draft.png" --model flux
+
+# 2. Upscale to 4K with Topaz (~51 CU)
+uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "file://tokyo-draft.png" --filename "tokyo-4k.png" --width 4096 --height 4096 --enhancer topaz
+```
+
+### Generate → Animate (image to video)
+
+Generate a hero image, then bring it to life as a video:
+```bash
+# 1. Generate high-quality image
+uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "a majestic dragon perched on a cliff at sunset" --filename "dragon.png" --model nano-banana-pro
+
+# 2. Animate it into a 5s video (use the Krea-hosted URL from step 1 output)
+uv run ~/.codex/skills/krea/scripts/generate_video.py --prompt "the dragon spreads its wings and takes flight, camera slowly zooms out" --filename "dragon-flight.mp4" --model kling-2.5 --start-image "RESULT_URL_FROM_STEP_1" --duration 5
+```
+
+### Style Transfer → Upscale
+
+Transform a photo into a different style, then upscale:
+```bash
+# 1. Style transfer with image-to-image
+uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "transform into Studio Ghibli anime style, soft colors, hand-painted look" --filename "ghibli-version.png" --image-url "https://example.com/photo.jpg" --model gpt-image
+
+# 2. Creative upscale with generative enhancement
+uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "file://ghibli-version.png" --filename "ghibli-4k.png" --width 4096 --height 4096 --enhancer topaz-generative --creativity 4
+```
+
+### Batch Variations → Pick Best → Upscale → Animate
+
+Full creative pipeline:
+```bash
+# 1. Generate 4 variations cheaply
+uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "cyberpunk samurai in neon-lit alley" --filename "samurai.png" --model flux --batch-size 4
+
+# 2. User picks their favorite (e.g. samurai-3.png)
+
+# 3. Upscale the chosen one
+uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "file://samurai-3.png" --filename "samurai-final.png" --width 4096 --height 4096 --enhancer topaz
+
+# 4. Animate it
+uv run ~/.codex/skills/krea/scripts/generate_video.py --prompt "the samurai draws their sword, neon lights flicker, slow cinematic camera push-in" --filename "samurai-cinematic.mp4" --model veo-3 --start-image "RESULT_URL" --duration 8 --generate-audio
+```
+
+### Multi-angle Product Shots
+
+Generate consistent product imagery from different angles:
+```bash
+# Front view
+uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "sleek wireless headphones on white background, front view, product photography, studio lighting" --filename "headphones-front.png" --model gpt-image --seed 42
+
+# Side view (same seed for consistency)
+uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "sleek wireless headphones on white background, side view, product photography, studio lighting" --filename "headphones-side.png" --model gpt-image --seed 42
+
+# Lifestyle shot
+uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "person wearing sleek wireless headphones, urban environment, golden hour" --filename "headphones-lifestyle.png" --model nano-banana-pro
+```
+
+### Workflow tips
+
+- **Use cheap models first** (`flux`, `z-image`) for prompt iteration, switch to expensive models (`gpt-image`, `nano-banana-pro`) only when the prompt is locked
+- **Chain image → video**: generate a still frame first, then animate with `--start-image` for much better video results than text-to-video alone
+- **Upscale last**: always generate at default resolution and upscale as the final step — it's cheaper and gives better results
+- **Use seeds**: set `--seed` to get reproducible results when iterating on prompts
+- **Batch for exploration**: use `--batch-size 4` to generate variations and let the user pick

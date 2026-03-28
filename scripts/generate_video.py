@@ -14,7 +14,7 @@ import requests
 
 API_BASE = "https://api.krea.ai"
 
-VIDEO_MODELS = {
+KNOWN_MODELS = {
     "kling-1.0": "/generate/video/kling/kling-1.0",
     "kling-1.5": "/generate/video/kling/kling-1.5",
     "kling-2.5": "/generate/video/kling/kling-2.5",
@@ -23,6 +23,19 @@ VIDEO_MODELS = {
     "hailuo-2.3": "/generate/video/hailuo/hailuo-2.3",
     "wan-2.5": "/generate/video/alibaba/wan-2.5",
 }
+
+
+def resolve_model(model_arg):
+    """Resolve model to endpoint. Accepts shorthand, full path, or raw name."""
+    if model_arg in KNOWN_MODELS:
+        return KNOWN_MODELS[model_arg]
+    if model_arg.startswith("/generate/video/"):
+        return model_arg
+    for endpoint in KNOWN_MODELS.values():
+        if endpoint.endswith("/" + model_arg):
+            return endpoint
+    print(f"Warning: Unknown model '{model_arg}', trying as endpoint path", file=sys.stderr)
+    return f"/generate/video/{model_arg}"
 
 
 def get_api_key(args_key):
@@ -67,7 +80,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate videos with Krea AI")
     parser.add_argument("--prompt", required=True, help="Text description")
     parser.add_argument("--filename", required=True, help="Output filename")
-    parser.add_argument("--model", default="kling-2.5", choices=list(VIDEO_MODELS.keys()), help="Model to use")
+    parser.add_argument("--model", default="kling-2.5", help="Model ID (e.g. kling-2.5, veo-3), raw name, or full endpoint path")
     parser.add_argument("--duration", type=int, help="Duration in seconds")
     parser.add_argument("--aspect-ratio", default="16:9", choices=["16:9", "9:16", "1:1"], help="Aspect ratio")
     parser.add_argument("--start-image", help="Starting image URL for image-to-video")
@@ -79,7 +92,7 @@ def main():
     args = parser.parse_args()
 
     api_key = get_api_key(args.api_key)
-    endpoint = VIDEO_MODELS[args.model]
+    endpoint = resolve_model(args.model)
 
     body = {"prompt": args.prompt}
     if args.aspect_ratio:

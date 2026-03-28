@@ -1,94 +1,141 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = []
+# dependencies = ["requests"]
 # ///
 
-"""List available Krea AI models."""
+"""List available Krea AI models by fetching the live OpenAPI spec."""
 
 import argparse
 import json
+import re
+import sys
+import requests
 
-IMAGE_MODELS = {
-    "z-image":           {"provider": "Z-Image",   "cu": 3,    "time": "~5s",   "capabilities": ["text-to-image"], "description": "Fastest, cheapest"},
-    "flux":              {"provider": "BFL",        "cu": 5,    "time": "~5s",   "capabilities": ["text-to-image", "image-to-image", "styles/LoRAs"], "description": "Fast, LoRA support"},
-    "flux-kontext":      {"provider": "BFL",        "cu": 9,    "time": "~5s",   "capabilities": ["text-to-image", "image-to-image"], "description": "Context-aware editing"},
-    "qwen":              {"provider": "Qwen",       "cu": 9,    "time": "~15s",  "capabilities": ["text-to-image"], "description": "Good quality, cheap"},
-    "imagen-4-fast":     {"provider": "Google",     "cu": 16,   "time": "~17s",  "capabilities": ["text-to-image"], "description": "Fast Google model"},
-    "ideogram-2-turbo":  {"provider": "Ideogram",   "cu": 20,   "time": "~8s",   "capabilities": ["text-to-image"], "description": "Good typography"},
-    "seedream-4":        {"provider": "ByteDance",  "cu": 24,   "time": "~20s",  "capabilities": ["text-to-image", "image-to-image"], "description": "Photorealistic"},
-    "seedream-5-lite":   {"provider": "ByteDance",  "cu": 28,   "time": "~20s",  "capabilities": ["text-to-image", "image-to-image"], "description": "Latest Seedream"},
-    "flux-pro":          {"provider": "BFL",        "cu": 31,   "time": "~11s",  "capabilities": ["text-to-image", "image-to-image", "styles/LoRAs"], "description": "High quality Flux"},
-    "nano-banana":       {"provider": "Google",     "cu": 32,   "time": "~10s",  "capabilities": ["text-to-image", "image-to-image"], "description": "Balanced"},
-    "imagen-3":          {"provider": "Google",     "cu": 32,   "time": "~32s",  "capabilities": ["text-to-image"], "description": "Google Imagen 3"},
-    "imagen-4":          {"provider": "Google",     "cu": 32,   "time": "~32s",  "capabilities": ["text-to-image"], "description": "Google Imagen 4"},
-    "runway-gen4":       {"provider": "Runway",     "cu": 40,   "time": "~60s",  "capabilities": ["image-to-image"], "description": "Needs reference images"},
-    "flux-pro-ultra":    {"provider": "BFL",        "cu": 47,   "time": "~18s",  "capabilities": ["text-to-image", "image-to-image", "styles/LoRAs"], "description": "Best Flux quality"},
-    "imagen-4-ultra":    {"provider": "Google",     "cu": 47,   "time": "~30s",  "capabilities": ["text-to-image"], "description": "Best Imagen"},
-    "nano-banana-flash": {"provider": "Google",     "cu": 48,   "time": "~15s",  "capabilities": ["text-to-image", "image-to-image"], "description": "Fast photorealism"},
-    "ideogram-3":        {"provider": "Ideogram",   "cu": 54,   "time": "~18s",  "capabilities": ["text-to-image", "styles"], "description": "Best text rendering"},
-    "nano-banana-pro":   {"provider": "Google",     "cu": 119,  "time": "~30s",  "capabilities": ["text-to-image", "image-to-image"], "description": "Superior photorealism"},
-    "seedream-3":        {"provider": "ByteDance",  "cu": None,  "time": "varies", "capabilities": ["text-to-image", "image-to-image"], "description": "ByteDance Seedream 3"},
-    "gpt-image":         {"provider": "OpenAI",     "cu": 184,  "time": "~60s",  "capabilities": ["text-to-image", "image-to-image", "styles/LoRAs"], "description": "Highest quality"},
-}
+OPENAPI_URL = "https://api.krea.ai/openapi.json"
 
-VIDEO_MODELS = {
-    "kling-1.0":   {"provider": "Kling",   "cu": 282,  "time": "~289s", "capabilities": ["text-to-video", "image-to-video", "camera-control"], "description": "Camera control, 5-10s"},
-    "kling-1.5":   {"provider": "Kling",   "cu": None, "time": "varies", "capabilities": ["text-to-video", "image-to-video", "camera-control"], "description": "Complex scenes"},
-    "kling-2.5":   {"provider": "Kling",   "cu": None, "time": "varies", "capabilities": ["text-to-video", "image-to-video", "camera-control"], "description": "Realistic physics"},
-    "veo-3":       {"provider": "Google",  "cu": 1017, "time": "~65-128s", "capabilities": ["text-to-video", "image-to-video", "audio"], "description": "Can generate audio"},
-    "veo-3.1":     {"provider": "Google",  "cu": None, "time": "varies", "capabilities": ["text-to-video", "image-to-video"], "description": "Cinematic quality"},
-    "hailuo-2.3":  {"provider": "Hailuo",  "cu": None, "time": "varies", "capabilities": ["text-to-video", "image-to-video"], "description": "Fast, smooth motion"},
-    "wan-2.5":     {"provider": "Alibaba", "cu": 569,  "time": "~180s", "capabilities": ["text-to-video", "image-to-video"], "description": "Style control"},
-}
 
-ENHANCERS = {
-    "topaz":            {"cu": 51,  "time": "~19s",  "max_resolution": "22K", "description": "Faithful upscaler"},
-    "topaz-generative": {"cu": 137, "time": "~96s",  "max_resolution": "16K", "description": "Creative enhancement"},
-    "topaz-bloom":      {"cu": 256, "time": "~132s", "max_resolution": "10K", "description": "Creative details"},
-}
+def fetch_models():
+    """Fetch the OpenAPI spec and extract all generation/enhance endpoints."""
+    r = requests.get(OPENAPI_URL, timeout=15)
+    r.raise_for_status()
+    spec = r.json()
+
+    image_models = {}
+    video_models = {}
+    enhancers = {}
+
+    for path, methods in spec.get("paths", {}).items():
+        post = methods.get("post")
+        if not post:
+            continue
+
+        summary = post.get("summary", "")
+        description = post.get("description", summary)
+        tags = post.get("tags", [])
+
+        # Extract compute units and time from description
+        cu_match = re.search(r"~?(\d+)\s*(?:CU|compute units)", description, re.IGNORECASE)
+        time_match = re.search(r"~?(\d+)\s*(?:s|seconds)", description, re.IGNORECASE)
+        cu = int(cu_match.group(1)) if cu_match else None
+        time_est = f"~{time_match.group(1)}s" if time_match else None
+
+        # Extract parameters from request body schema
+        body_schema = {}
+        request_body = post.get("requestBody", {})
+        content = request_body.get("content", {})
+        json_content = content.get("application/json", {})
+        body_schema = json_content.get("schema", {})
+        params = list(body_schema.get("properties", {}).keys()) if body_schema else []
+
+        entry = {
+            "endpoint": path,
+            "summary": summary,
+            "description": description.split(".")[0] if description else "",
+            "compute_units": cu,
+            "estimated_time": time_est,
+            "parameters": params,
+        }
+
+        if path.startswith("/generate/image/"):
+            # Derive a short model ID from the path
+            # /generate/image/bfl/flux-1-dev → flux-1-dev
+            parts = path.replace("/generate/image/", "").split("/")
+            provider = parts[0] if parts else ""
+            model_name = parts[1] if len(parts) > 1 else parts[0]
+            entry["provider"] = provider
+            entry["id"] = model_name
+            image_models[model_name] = entry
+
+        elif path.startswith("/generate/video/"):
+            parts = path.replace("/generate/video/", "").split("/")
+            provider = parts[0] if parts else ""
+            model_name = parts[1] if len(parts) > 1 else parts[0]
+            entry["provider"] = provider
+            entry["id"] = model_name
+            video_models[model_name] = entry
+
+        elif path.startswith("/generate/enhance/"):
+            parts = path.replace("/generate/enhance/", "").split("/")
+            provider = parts[0] if parts else ""
+            model_name = parts[1] if len(parts) > 1 else parts[0]
+            entry["provider"] = provider
+            entry["id"] = f"{provider}-{model_name}" if provider != model_name else model_name
+            enhancers[entry["id"]] = entry
+
+    return image_models, video_models, enhancers
 
 
 def main():
-    parser = argparse.ArgumentParser(description="List available Krea AI models")
+    parser = argparse.ArgumentParser(description="List available Krea AI models (live from API)")
     parser.add_argument("--type", choices=["image", "video", "enhance", "all"], default="all", help="Filter by type")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     args = parser.parse_args()
 
+    try:
+        image_models, video_models, enhancers = fetch_models()
+    except Exception as e:
+        print(f"Error fetching models: {e}", file=sys.stderr)
+        sys.exit(1)
+
     if args.json:
         result = {}
         if args.type in ("all", "image"):
-            result["image_models"] = IMAGE_MODELS
+            result["image_models"] = image_models
         if args.type in ("all", "video"):
-            result["video_models"] = VIDEO_MODELS
+            result["video_models"] = video_models
         if args.type in ("all", "enhance"):
-            result["enhancers"] = ENHANCERS
+            result["enhancers"] = enhancers
         print(json.dumps(result, indent=2))
         return
 
     if args.type in ("all", "image"):
         print("=== Image Models ===")
-        print(f"{'Model':<20} {'CU':>5} {'Time':<8} {'Description'}")
-        print("-" * 70)
-        for name, info in IMAGE_MODELS.items():
-            cu = str(info["cu"]) if info["cu"] else "?"
-            print(f"{name:<20} {cu:>5} {info['time']:<8} {info['description']}")
+        print(f"{'Model':<25} {'CU':>5} {'Time':<8} {'Endpoint'}")
+        print("-" * 80)
+        for name, info in sorted(image_models.items(), key=lambda x: (x[1]["compute_units"] or 9999)):
+            cu = str(info["compute_units"]) if info["compute_units"] else "?"
+            time_est = info["estimated_time"] or "?"
+            print(f"{name:<25} {cu:>5} {time_est:<8} {info['endpoint']}")
         print()
 
     if args.type in ("all", "video"):
         print("=== Video Models ===")
-        print(f"{'Model':<20} {'CU':>5} {'Time':<10} {'Description'}")
-        print("-" * 70)
-        for name, info in VIDEO_MODELS.items():
-            cu = str(info["cu"]) if info["cu"] else "?"
-            print(f"{name:<20} {cu:>5} {info['time']:<10} {info['description']}")
+        print(f"{'Model':<25} {'CU':>5} {'Time':<10} {'Endpoint'}")
+        print("-" * 80)
+        for name, info in sorted(video_models.items(), key=lambda x: (x[1]["compute_units"] or 9999)):
+            cu = str(info["compute_units"]) if info["compute_units"] else "?"
+            time_est = info["estimated_time"] or "?"
+            print(f"{name:<25} {cu:>5} {time_est:<10} {info['endpoint']}")
         print()
 
     if args.type in ("all", "enhance"):
         print("=== Enhancers ===")
-        print(f"{'Enhancer':<20} {'CU':>5} {'Time':<8} {'Max Res':<8} {'Description'}")
-        print("-" * 70)
-        for name, info in ENHANCERS.items():
-            print(f"{name:<20} {info['cu']:>5} {info['time']:<8} {info['max_resolution']:<8} {info['description']}")
+        print(f"{'Enhancer':<25} {'CU':>5} {'Time':<8} {'Endpoint'}")
+        print("-" * 80)
+        for name, info in sorted(enhancers.items(), key=lambda x: (x[1]["compute_units"] or 9999)):
+            cu = str(info["compute_units"]) if info["compute_units"] else "?"
+            time_est = info["estimated_time"] or "?"
+            print(f"{name:<25} {cu:>5} {time_est:<8} {info['endpoint']}")
         print()
 
 

@@ -14,7 +14,7 @@ import requests
 
 API_BASE = "https://api.krea.ai"
 
-IMAGE_MODELS = {
+KNOWN_MODELS = {
     "z-image": "/generate/image/z-image/z-image",
     "flux": "/generate/image/bfl/flux-1-dev",
     "flux-kontext": "/generate/image/bfl/flux-1-kontext-dev",
@@ -36,6 +36,24 @@ IMAGE_MODELS = {
     "seedream-5-lite": "/generate/image/bytedance/seedream-5-lite",
     "qwen": "/generate/image/qwen/2512",
 }
+
+
+def resolve_model(model_arg):
+    """Resolve model to endpoint. Accepts a known shorthand, a full endpoint path,
+    or a raw model name from the OpenAPI spec (e.g. 'flux-1-dev')."""
+    # Known shorthand
+    if model_arg in KNOWN_MODELS:
+        return KNOWN_MODELS[model_arg]
+    # Already a full path
+    if model_arg.startswith("/generate/image/"):
+        return model_arg
+    # Try to match as raw model name from OpenAPI (e.g. flux-1-dev, nano-banana-pro)
+    for endpoint in KNOWN_MODELS.values():
+        if endpoint.endswith("/" + model_arg):
+            return endpoint
+    # Last resort: assume it's a valid path segment
+    print(f"Warning: Unknown model '{model_arg}', trying as endpoint path", file=sys.stderr)
+    return f"/generate/image/{model_arg}"
 
 
 def get_api_key(args_key):
@@ -80,7 +98,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate images with Krea AI")
     parser.add_argument("--prompt", required=True, help="Text description")
     parser.add_argument("--filename", required=True, help="Output filename")
-    parser.add_argument("--model", default="flux", choices=list(IMAGE_MODELS.keys()), help="Model to use")
+    parser.add_argument("--model", default="flux", help="Model ID (e.g. flux, gpt-image), raw name (e.g. flux-1-dev), or full endpoint path")
     parser.add_argument("--width", type=int, help="Width in pixels")
     parser.add_argument("--height", type=int, help="Height in pixels")
     parser.add_argument("--aspect-ratio", help="Aspect ratio (1:1, 16:9, 9:16, etc.)")
@@ -97,7 +115,7 @@ def main():
     args = parser.parse_args()
 
     api_key = get_api_key(args.api_key)
-    endpoint = IMAGE_MODELS[args.model]
+    endpoint = resolve_model(args.model)
 
     body = {"prompt": args.prompt}
     if args.width:

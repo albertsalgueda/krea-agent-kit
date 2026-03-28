@@ -14,11 +14,24 @@ import requests
 
 API_BASE = "https://api.krea.ai"
 
-ENHANCERS = {
+KNOWN_ENHANCERS = {
     "topaz": "/generate/enhance/topaz/standard-enhance",
     "topaz-generative": "/generate/enhance/topaz/generative-enhance",
     "topaz-bloom": "/generate/enhance/topaz/bloom-enhance",
 }
+
+
+def resolve_enhancer(enhancer_arg):
+    """Resolve enhancer to endpoint. Accepts shorthand, full path, or raw name."""
+    if enhancer_arg in KNOWN_ENHANCERS:
+        return KNOWN_ENHANCERS[enhancer_arg]
+    if enhancer_arg.startswith("/generate/enhance/"):
+        return enhancer_arg
+    for endpoint in KNOWN_ENHANCERS.values():
+        if endpoint.endswith("/" + enhancer_arg):
+            return endpoint
+    print(f"Warning: Unknown enhancer '{enhancer_arg}', trying as endpoint path", file=sys.stderr)
+    return f"/generate/enhance/{enhancer_arg}"
 
 
 def get_api_key(args_key):
@@ -65,7 +78,7 @@ def main():
     parser.add_argument("--filename", required=True, help="Output filename")
     parser.add_argument("--width", type=int, required=True, help="Target width")
     parser.add_argument("--height", type=int, required=True, help="Target height")
-    parser.add_argument("--enhancer", default="topaz", choices=list(ENHANCERS.keys()), help="Enhancer to use")
+    parser.add_argument("--enhancer", default="topaz", help="Enhancer ID (e.g. topaz, topaz-generative, topaz-bloom) or full endpoint path")
     parser.add_argument("--enhancer-model", help="Sub-model (e.g. 'Standard V2', 'Redefine', 'Reimagine')")
     parser.add_argument("--prompt", help="Enhancement guidance prompt")
     parser.add_argument("--creativity", type=int, help="Creativity level (generative: 1-6, bloom: 1-9)")
@@ -78,7 +91,7 @@ def main():
     args = parser.parse_args()
 
     api_key = get_api_key(args.api_key)
-    endpoint = ENHANCERS[args.enhancer]
+    endpoint = resolve_enhancer(args.enhancer)
 
     body = {
         "image_url": args.image_url,
