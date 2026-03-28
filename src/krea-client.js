@@ -1,5 +1,44 @@
 const BASE_URL = "https://api.krea.ai";
 
+export const IMAGE_MODELS = {
+  "z-image":           { endpoint: "/generate/image/z-image/z-image",             provider: "Z-Image",    cu: 3,   time: "~5s",   capabilities: ["text-to-image"], description: "Fastest model. Realistic, low diversity" },
+  "flux":              { endpoint: "/generate/image/bfl/flux-1-dev",              provider: "BFL",        cu: 5,   time: "~5s",   capabilities: ["text-to-image", "image-to-image", "styles/LoRAs"], description: "Fast and cheap. Best for LoRAs" },
+  "flux-kontext":      { endpoint: "/generate/image/bfl/flux-1-kontext-dev",      provider: "BFL",        cu: 9,   time: "~5s",   capabilities: ["text-to-image", "image-to-image"], description: "Flux with context-aware editing" },
+  "qwen":              { endpoint: "/generate/image/qwen/2512",                   provider: "Qwen",       cu: 9,   time: "~15s",  capabilities: ["text-to-image"], description: "Good quality at low cost" },
+  "imagen-4-fast":     { endpoint: "/generate/image/google/imagen-4-fast",        provider: "Google",     cu: 16,  time: "~17s",  capabilities: ["text-to-image"], description: "Fast Imagen 4 variant" },
+  "ideogram-2-turbo":  { endpoint: "/generate/image/ideogram/ideogram-2-turbo",   provider: "Ideogram",   cu: 20,  time: "~8s",   capabilities: ["text-to-image"], description: "Fast with good typography" },
+  "seedream-4":        { endpoint: "/generate/image/bytedance/seedream-4",        provider: "ByteDance",  cu: 24,  time: "~20s",  capabilities: ["text-to-image", "image-to-image"], description: "Photorealistic, flexible resolution" },
+  "seedream-5-lite":   { endpoint: "/generate/image/bytedance/seedream-5-lite",   provider: "ByteDance",  cu: 28,  time: "~20s",  capabilities: ["text-to-image", "image-to-image"], description: "Latest Seedream, lightweight" },
+  "flux-pro":          { endpoint: "/generate/image/bfl/flux-1.1-pro",            provider: "BFL",        cu: 31,  time: "~11s",  capabilities: ["text-to-image", "image-to-image", "styles/LoRAs"], description: "Higher quality Flux" },
+  "nano-banana":       { endpoint: "/generate/image/google/nano-banana",          provider: "Google",     cu: 32,  time: "~10s",  capabilities: ["text-to-image", "image-to-image"], description: "Good balance of speed and quality" },
+  "imagen-3":          { endpoint: "/generate/image/google/imagen-3",             provider: "Google",     cu: 32,  time: "~32s",  capabilities: ["text-to-image"], description: "Google Imagen 3" },
+  "imagen-4":          { endpoint: "/generate/image/google/imagen-4",             provider: "Google",     cu: 32,  time: "~32s",  capabilities: ["text-to-image"], description: "Google Imagen 4" },
+  "runway-gen4":       { endpoint: "/generate/image/runway/gen-4",                provider: "Runway",     cu: 40,  time: "~60s",  capabilities: ["image-to-image"], description: "Requires reference images" },
+  "flux-pro-ultra":    { endpoint: "/generate/image/bfl/flux-1.1-pro-ultra",      provider: "BFL",        cu: 47,  time: "~18s",  capabilities: ["text-to-image", "image-to-image", "styles/LoRAs"], description: "Highest quality Flux" },
+  "imagen-4-ultra":    { endpoint: "/generate/image/google/imagen-4-ultra",       provider: "Google",     cu: 47,  time: "~30s",  capabilities: ["text-to-image"], description: "Highest quality Imagen" },
+  "nano-banana-flash": { endpoint: "/generate/image/google/nano-banana-flash",    provider: "Google",     cu: 48,  time: "~15s",  capabilities: ["text-to-image", "image-to-image"], description: "Fast Nano Banana variant" },
+  "ideogram-3":        { endpoint: "/generate/image/ideogram/ideogram-3",         provider: "Ideogram",   cu: 54,  time: "~18s",  capabilities: ["text-to-image", "styles"], description: "Best typography and text rendering" },
+  "nano-banana-pro":   { endpoint: "/generate/image/google/nano-banana-pro",      provider: "Google",     cu: 119, time: "~30s",  capabilities: ["text-to-image", "image-to-image"], description: "Superior photorealistic detail" },
+  "seedream-3":        { endpoint: "/generate/image/bytedance/seedream-3",        provider: "ByteDance",  cu: null, time: "varies", capabilities: ["text-to-image", "image-to-image"], description: "ByteDance Seedream 3" },
+  "gpt-image":         { endpoint: "/generate/image/openai/gpt-image",            provider: "OpenAI",     cu: 184, time: "~60s",  capabilities: ["text-to-image", "image-to-image", "styles/LoRAs"], description: "Highest quality, best prompt adherence" },
+};
+
+export const VIDEO_MODELS = {
+  "kling-1.0":   { endpoint: "/generate/video/kling/kling-1.0",     provider: "Kling",   cu: 282,  time: "~289s (5s video)",  capabilities: ["text-to-video", "image-to-video", "camera-control"], description: "High control, 5-10s duration" },
+  "kling-1.5":   { endpoint: "/generate/video/kling/kling-1.5",     provider: "Kling",   cu: null, time: "varies",            capabilities: ["text-to-video", "image-to-video", "camera-control"], description: "Quality-focused, complex scenes" },
+  "kling-2.5":   { endpoint: "/generate/video/kling/kling-2.5",     provider: "Kling",   cu: null, time: "varies",            capabilities: ["text-to-video", "image-to-video", "camera-control"], description: "Advanced motion control, realistic physics" },
+  "veo-3":       { endpoint: "/generate/video/google/veo-3",        provider: "Google",  cu: 1017, time: "~65-128s",          capabilities: ["text-to-video", "image-to-video", "audio"], description: "High quality, can generate audio" },
+  "veo-3.1":     { endpoint: "/generate/video/google/veo-3.1",      provider: "Google",  cu: null, time: "varies",            capabilities: ["text-to-video", "image-to-video"], description: "Exceptional prompt adherence, cinematic" },
+  "hailuo-2.3":  { endpoint: "/generate/video/hailuo/hailuo-2.3",   provider: "Hailuo",  cu: null, time: "varies",            capabilities: ["text-to-video", "image-to-video"], description: "Fast, smooth motion, natural transitions" },
+  "wan-2.5":     { endpoint: "/generate/video/alibaba/wan-2.5",     provider: "Alibaba", cu: 569,  time: "~180s",             capabilities: ["text-to-video", "image-to-video"], description: "High-res with style control" },
+};
+
+export const ENHANCERS = {
+  "topaz":            { endpoint: "/generate/enhance/topaz/standard-enhance",    cu: 51,  time: "~19s",  maxResolution: "22K", description: "Faithful upscaler. Models: Standard V2, Low Resolution V2, CGI, High Fidelity V2, Text Refine" },
+  "topaz-generative": { endpoint: "/generate/enhance/topaz/generative-enhance",  cu: 137, time: "~96s",  maxResolution: "16K", description: "Creative enhancement. Models: Redefine, Recovery, Recovery V2, Reimagine" },
+  "topaz-bloom":      { endpoint: "/generate/enhance/topaz/bloom-enhance",       cu: 256, time: "~132s", maxResolution: "10K", description: "Creative details and upscaling. Model: Reimagine" },
+};
+
 export class KreaClient {
   constructor(apiToken) {
     if (!apiToken) {
@@ -96,67 +135,31 @@ export class KreaClient {
   // ── Image Generation ──────────────────────────────────
 
   async generateImage(model, params, webhookUrl) {
-    const modelPaths = {
-      "flux": "/generate/image/bfl/flux-1-dev",
-      "flux-kontext": "/generate/image/bfl/flux-1-kontext-dev",
-      "flux-pro": "/generate/image/bfl/flux-1.1-pro",
-      "flux-pro-ultra": "/generate/image/bfl/flux-1.1-pro-ultra",
-      "nano-banana": "/generate/image/google/nano-banana",
-      "nano-banana-flash": "/generate/image/google/nano-banana-flash",
-      "nano-banana-pro": "/generate/image/google/nano-banana-pro",
-      "imagen-3": "/generate/image/google/imagen-3",
-      "imagen-4": "/generate/image/google/imagen-4",
-      "imagen-4-fast": "/generate/image/google/imagen-4-fast",
-      "imagen-4-ultra": "/generate/image/google/imagen-4-ultra",
-      "ideogram-2-turbo": "/generate/image/ideogram/ideogram-2-turbo",
-      "ideogram-3": "/generate/image/ideogram/ideogram-3",
-      "gpt-image": "/generate/image/openai/gpt-image",
-      "runway-gen4": "/generate/image/runway/gen-4",
-      "seedream-3": "/generate/image/bytedance/seedream-3",
-      "seedream-4": "/generate/image/bytedance/seedream-4",
-      "seedream-5-lite": "/generate/image/bytedance/seedream-5-lite",
-      "qwen": "/generate/image/qwen/2512",
-      "z-image": "/generate/image/z-image/z-image",
-    };
-    const path = modelPaths[model];
-    if (!path) {
-      throw new Error(`Unknown image model: ${model}. Available: ${Object.keys(modelPaths).join(", ")}`);
+    const info = IMAGE_MODELS[model];
+    if (!info) {
+      throw new Error(`Unknown image model: ${model}. Available: ${Object.keys(IMAGE_MODELS).join(", ")}`);
     }
-    return this.request("POST", path, params, webhookUrl);
+    return this.request("POST", info.endpoint, params, webhookUrl);
   }
 
   // ── Image Enhancement ─────────────────────────────────
 
   async enhanceImage(enhancer, params, webhookUrl) {
-    const enhancerPaths = {
-      "topaz": "/generate/enhance/topaz/standard-enhance",
-      "topaz-generative": "/generate/enhance/topaz/generative-enhance",
-      "topaz-bloom": "/generate/enhance/topaz/bloom-enhance",
-    };
-    const path = enhancerPaths[enhancer];
-    if (!path) {
-      throw new Error(`Unknown enhancer: ${enhancer}. Available: ${Object.keys(enhancerPaths).join(", ")}`);
+    const info = ENHANCERS[enhancer];
+    if (!info) {
+      throw new Error(`Unknown enhancer: ${enhancer}. Available: ${Object.keys(ENHANCERS).join(", ")}`);
     }
-    return this.request("POST", path, params, webhookUrl);
+    return this.request("POST", info.endpoint, params, webhookUrl);
   }
 
   // ── Video Generation ──────────────────────────────────
 
   async generateVideo(model, params, webhookUrl) {
-    const modelPaths = {
-      "kling-1.0": "/generate/video/kling/kling-1.0",
-      "kling-1.5": "/generate/video/kling/kling-1.5",
-      "kling-2.5": "/generate/video/kling/kling-2.5",
-      "veo-3": "/generate/video/google/veo-3",
-      "veo-3.1": "/generate/video/google/veo-3.1",
-      "hailuo-2.3": "/generate/video/hailuo/hailuo-2.3",
-      "wan-2.5": "/generate/video/alibaba/wan-2.5",
-    };
-    const path = modelPaths[model];
-    if (!path) {
-      throw new Error(`Unknown video model: ${model}. Available: ${Object.keys(modelPaths).join(", ")}`);
+    const info = VIDEO_MODELS[model];
+    if (!info) {
+      throw new Error(`Unknown video model: ${model}. Available: ${Object.keys(VIDEO_MODELS).join(", ")}`);
     }
-    return this.request("POST", path, params, webhookUrl);
+    return this.request("POST", info.endpoint, params, webhookUrl);
   }
 
   // ── Styles / LoRAs ────────────────────────────────────

@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { KreaClient } from "./krea-client.js";
+import { KreaClient, IMAGE_MODELS, VIDEO_MODELS, ENHANCERS } from "./krea-client.js";
 
 const client = new KreaClient(process.env.KREA_API_TOKEN);
 
@@ -12,6 +12,41 @@ const server = new McpServer({
   version: "1.0.0",
   description: "Krea.ai API – generate images, videos, enhance, manage styles & jobs",
 });
+
+// ── List Models ─────────────────────────────────────────
+
+server.tool(
+  "list_models",
+  "List all available Krea AI models with their capabilities, compute unit costs, and estimated generation times. Use this to discover which models are available and pick the right one for your task.",
+  {
+    type: z.enum(["image", "video", "enhance", "all"]).optional().describe("Filter by model type. Defaults to 'all'"),
+  },
+  async ({ type }) => {
+    const result = {};
+    const showType = type || "all";
+
+    if (showType === "all" || showType === "image") {
+      result.image_models = Object.entries(IMAGE_MODELS).map(([id, m]) => ({
+        id, provider: m.provider, compute_units: m.cu, estimated_time: m.time,
+        capabilities: m.capabilities, description: m.description,
+      }));
+    }
+    if (showType === "all" || showType === "video") {
+      result.video_models = Object.entries(VIDEO_MODELS).map(([id, m]) => ({
+        id, provider: m.provider, compute_units: m.cu, estimated_time: m.time,
+        capabilities: m.capabilities, description: m.description,
+      }));
+    }
+    if (showType === "all" || showType === "enhance") {
+      result.enhancers = Object.entries(ENHANCERS).map(([id, m]) => ({
+        id, compute_units: m.cu, estimated_time: m.time,
+        max_resolution: m.maxResolution, description: m.description,
+      }));
+    }
+
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
 
 // ── Image Generation ────────────────────────────────────
 

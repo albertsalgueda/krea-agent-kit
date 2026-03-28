@@ -24,11 +24,46 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { InMemoryEventStore } from "@modelcontextprotocol/sdk/examples/shared/inMemoryEventStore.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { z } from "zod";
-import { KreaClient } from "./krea-client.js";
+import { KreaClient, IMAGE_MODELS, VIDEO_MODELS, ENHANCERS } from "./krea-client.js";
 
 // ── Register all Krea tools on a server instance ────────
 
 function registerKreaTools(server, client) {
+  // ── List Models ───────────────────────────────────────
+
+  server.tool(
+    "list_models",
+    "List all available Krea AI models with their capabilities, compute unit costs, and estimated generation times. Use this to discover which models are available and pick the right one for your task.",
+    {
+      type: z.enum(["image", "video", "enhance", "all"]).optional().describe("Filter by model type. Defaults to 'all'"),
+    },
+    async ({ type }) => {
+      const result = {};
+      const showType = type || "all";
+
+      if (showType === "all" || showType === "image") {
+        result.image_models = Object.entries(IMAGE_MODELS).map(([id, m]) => ({
+          id, provider: m.provider, compute_units: m.cu, estimated_time: m.time,
+          capabilities: m.capabilities, description: m.description,
+        }));
+      }
+      if (showType === "all" || showType === "video") {
+        result.video_models = Object.entries(VIDEO_MODELS).map(([id, m]) => ({
+          id, provider: m.provider, compute_units: m.cu, estimated_time: m.time,
+          capabilities: m.capabilities, description: m.description,
+        }));
+      }
+      if (showType === "all" || showType === "enhance") {
+        result.enhancers = Object.entries(ENHANCERS).map(([id, m]) => ({
+          id, compute_units: m.cu, estimated_time: m.time,
+          max_resolution: m.maxResolution, description: m.description,
+        }));
+      }
+
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+  );
+
   // ── Image Generation ────────────────────────────────
 
   server.tool(
