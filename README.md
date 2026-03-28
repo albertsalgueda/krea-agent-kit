@@ -4,7 +4,8 @@ MCP server and Claude Code skill for the [Krea.ai](https://krea.ai) API.
 
 ## What's Included
 
-- **MCP Server** (`src/mcp-server.js`) — Full MCP server exposing all Krea API capabilities as tools
+- **MCP Server (stdio)** (`src/mcp-server.js`) — Local MCP server for Claude Code / Claude Desktop
+- **MCP Server (remote)** (`src/mcp-remote.js`) — HTTP MCP server for claude.ai and remote clients
 - **Claude Code Skill** (`.claude/skills/krea-api.md`) — Comprehensive reference for Claude Code to use the Krea API
 - **API Client** (`src/krea-client.js`) — Reusable JavaScript client for the Krea API
 
@@ -20,7 +21,7 @@ Create a token at [krea.ai/settings/api-tokens](https://krea.ai/settings/api-tok
 npm install
 ```
 
-### 3. Configure MCP Server in Claude Code
+### 3a. Use with Claude Code / Claude Desktop (stdio)
 
 Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/settings.json`):
 
@@ -37,6 +38,27 @@ Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/
   }
 }
 ```
+
+### 3b. Use with claude.ai (remote MCP)
+
+Start the remote server:
+
+```bash
+KREA_API_TOKEN=your-token-here node src/mcp-remote.js
+# or with a custom port:
+KREA_API_TOKEN=your-token-here PORT=8080 node src/mcp-remote.js
+```
+
+Then expose it publicly (e.g. with ngrok, Cloudflare Tunnel, or deploy to a server):
+
+```bash
+ngrok http 3001
+```
+
+In claude.ai, go to **Settings > Integrations > Add MCP Server** and add:
+- **URL**: `https://your-ngrok-url.ngrok.app/mcp`
+
+The server supports both Streamable HTTP (`/mcp`) and legacy SSE (`/sse` + `/messages`).
 
 ## Available MCP Tools
 

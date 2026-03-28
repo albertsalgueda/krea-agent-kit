@@ -8,7 +8,8 @@
     "krea-mcp": "src/mcp-server.js"
   },
   "scripts": {
-    "start": "node src/mcp-server.js"
+    "start": "node src/mcp-server.js",
+    "start:remote": "node src/mcp-remote.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1"
