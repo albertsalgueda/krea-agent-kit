@@ -417,3 +417,28 @@ When a user asks for something complex like "generate a product shot from 4 angl
 - Start cheap (`flux`) for concept, switch to quality (`gpt-image`, `nano-banana-pro`) for finals
 - Upscale as the last step before video — cheaper and better quality
 - Use `{i}` in prompts inside `fan_out` to vary the prompt per iteration
+
+### Pipeline Advanced Features
+
+**Template variables** — Use `{{variable}}` in pipeline JSON and pass values at runtime:
+```bash
+uv run ~/.codex/skills/krea/scripts/pipeline.py --pipeline template.json --var subject="red sports car" --var style="cinematic"
+```
+Pipeline JSON can then use `{{subject}}` and `{{style}}` anywhere in prompts, filenames, etc. All variables must be provided or the pipeline exits with an error.
+
+**Parallel fan_out** — Add `"parallel": true` to a fan_out step to run all sub-jobs concurrently:
+```json
+{
+  "action": "fan_out",
+  "use_previous": true,
+  "parallel": true,
+  "step": { "action": "enhance", "enhancer": "topaz", "width": 4096, "height": 4096, "filename": "upscaled-{i}" }
+}
+```
+Control concurrency with `--max-parallel N` (default: 3).
+
+**Resume interrupted pipelines** — Use `--resume` to skip already-completed steps. The pipeline saves a `.pipeline-state.json` manifest after each step, recording result URLs. On resume, `use_previous` chains are correctly restored from the manifest.
+
+**Dry-run** — Use `--dry-run` to estimate CU cost without executing.
+
+**Notifications** — Use `--notify` to get a desktop notification when a pipeline finishes (Linux/macOS).

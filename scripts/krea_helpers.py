@@ -7,9 +7,11 @@
 
 import json
 import os
+import platform
+import shutil
+import subprocess
 import sys
 import time
-import base64
 import mimetypes
 import requests
 
@@ -99,7 +101,6 @@ def api_post(api_key, endpoint, body, max_retries=3):
             print(f"  Rate limited, retrying in {delay}s (attempt {attempt + 1}/{max_retries})...", file=sys.stderr)
             time.sleep(delay)
             continue
-        # Non-retryable error
         msg = format_api_error(r.status_code, r.text)
         print(f"Error: {msg}", file=sys.stderr)
         sys.exit(1)
@@ -168,7 +169,6 @@ def ensure_image_url(path_or_url, api_key):
     if path_or_url.startswith("http://") or path_or_url.startswith("https://"):
         return path_or_url
 
-    # Strip file:// prefix if present
     local_path = path_or_url
     if local_path.startswith("file://"):
         local_path = local_path[7:]
@@ -180,7 +180,6 @@ def ensure_image_url(path_or_url, api_key):
     mime_type = mimetypes.guess_type(local_path)[0] or "application/octet-stream"
     ext = os.path.splitext(local_path)[1].lstrip(".")
 
-    # Upload via multipart form data
     boundary = f"----KreaBoundary{int(time.time())}"
     with open(local_path, "rb") as f:
         file_data = f.read()
@@ -222,3 +221,20 @@ def output_path(filename, output_dir=None):
         os.makedirs(output_dir, exist_ok=True)
         return os.path.join(output_dir, os.path.basename(filename))
     return filename
+
+
+# ── Desktop notification ─────────────────────────────────
+
+def send_notification(title, message):
+    """Send a desktop notification. Best-effort, never raises."""
+    try:
+        system = platform.system()
+        if system == "Linux" and shutil.which("notify-send"):
+            subprocess.run(["notify-send", title, message], timeout=5)
+        elif system == "Darwin":
+            script = f'display notification "{message}" with title "{title}"'
+            subprocess.run(["osascript", "-e", script], timeout=5)
+        else:
+            print("\a", end="", file=sys.stderr)
+    except Exception:
+        pass
