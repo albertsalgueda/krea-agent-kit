@@ -10,19 +10,22 @@ Generate images, videos, upscale/enhance with 20+ AI models through the [Krea.ai
 - **Claude Code Skill** (`.claude/skills/krea-api.md`) — Context skill for Claude Code
 - **API Client** (`src/krea-client.js`) — Reusable JavaScript client
 
-## Use with OpenClaw / ClawHub
+## Install in OpenClaw
 
-Install the skill from ClawHub, or manually:
+Paste this prompt in OpenClaw (replace `YOUR_API_TOKEN` with your token from [krea.ai/settings/api-tokens](https://krea.ai/settings/api-tokens)):
+
+```
+Install this skill from https://github.com/albertsalgueda/krea-agent-kit — copy SKILL.md and the scripts/ folder to ~/.codex/skills/krea/. My Krea API key is: YOUR_API_TOKEN — set it as KREA_API_TOKEN environment variable. Then generate an image of a cyberpunk city at night to test it works.
+```
+
+That's it. OpenClaw will install the skill, set up the API key, and generate a test image.
+
+### Manual install
 
 ```bash
-# Copy skill files to OpenClaw skills directory
 mkdir -p ~/.codex/skills/krea
 cp SKILL.md ~/.codex/skills/krea/
 cp -r scripts ~/.codex/skills/krea/
-```
-
-Set your API key:
-```bash
 export KREA_API_TOKEN="your-token-here"
 ```
 
