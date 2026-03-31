@@ -1,40 +1,54 @@
 # Krea AI Skill
 
-Generate images, videos, upscale/enhance with 20+ AI models through the [Krea.ai](https://krea.ai) API. A **ClawHub/OpenClaw skill** — install and start generating in one command.
+Generate images, videos, upscale/enhance with 20+ AI models through the [Krea.ai](https://krea.ai) API. Works with Claude Code, Cursor, Copilot, Codex, Windsurf, and other AI agents.
 
-## Install in OpenClaw
+## Install
 
-Paste this prompt in OpenClaw (replace `YOUR_API_TOKEN` with your token from [krea.ai/settings/api-tokens](https://krea.ai/settings/api-tokens)):
-
-```
-Install this skill from https://github.com/albertsalgueda/krea-agent-kit — copy SKILL.md and the scripts/ folder to ~/.codex/skills/krea/. My Krea API key is: YOUR_API_TOKEN — set it as KREA_API_TOKEN environment variable. Then generate an image of a cyberpunk city at night to test it works.
-```
-
-That's it. OpenClaw will install the skill, set up the API key, and generate a test image.
-
-## Install in Claude Code
-
-Paste this prompt in Claude Code:
-
-```
-Fetch the Krea AI skill from https://raw.githubusercontent.com/albertsalgueda/krea-agent-kit/main/SKILL.md and save it to .claude/skills/krea-api.md in this project. Also fetch all Python scripts from https://github.com/albertsalgueda/krea-agent-kit/tree/main/scripts and save them to scripts/krea/. My Krea API key is: YOUR_API_TOKEN — export it as KREA_API_TOKEN. Then generate an image of a cyberpunk city at night to test it works.
-```
-
-### Manual install
+### Vercel Skills (recommended)
 
 ```bash
-mkdir -p ~/.codex/skills/krea
-cp SKILL.md ~/.codex/skills/krea/
-cp -r scripts ~/.codex/skills/krea/
+npx skills add krea-ai/skill
+```
+
+Works with Claude Code, Cursor, Copilot, Codex, Windsurf, and 15+ other agents.
+
+### Claude Code Plugin
+
+```
+/plugin marketplace add krea-ai/skill
+```
+
+Then select `krea-ai` and install.
+
+### skillpm (npm)
+
+```bash
+npx skillpm install krea-ai-skill
+```
+
+### OpenClaw / ClawHub
+
+Drag the `clawhub/` folder to [clawhub.ai/upload](https://clawhub.ai/upload), or paste in OpenClaw:
+
+```
+Install this skill from https://github.com/krea-ai/skill — copy SKILL.md and the scripts/ folder to ~/.codex/skills/krea/. My Krea API key is: YOUR_API_TOKEN — set it as KREA_API_TOKEN environment variable.
+```
+
+### Manual
+
+```bash
+# Clone and set up
+git clone https://github.com/krea-ai/skill.git
 export KREA_API_TOKEN="your-token-here"
 ```
 
-Then just ask:
-- *"Generate an image of a cyberpunk cat"*
-- *"Create a 5-second video of ocean waves"*
-- *"Upscale this image to 4K"*
-- *"What image models are available?"*
-- *"Generate a product shot from 4 angles and make videos of each"*
+Then ask your agent: *"Generate an image of a cyberpunk city at night"*
+
+## Setup
+
+1. Get your API token at [krea.ai/settings/api-tokens](https://krea.ai/settings/api-tokens)
+2. Set `KREA_API_TOKEN` environment variable (or pass `--api-key` to any script)
+3. Ensure `uv` is installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
 
 ## Available Scripts
 
@@ -45,24 +59,37 @@ Then just ask:
 | `scripts/enhance_image.py` | Upscale/enhance with Topaz (up to 22K resolution) |
 | `scripts/list_models.py` | List all models live from the API |
 | `scripts/pipeline.py` | Multi-step workflows with fan_out, templates, parallel execution |
+| `scripts/train_style.py` | Train custom LoRA styles on brand images |
 | `scripts/get_job.py` | Check job status |
 | `scripts/krea_helpers.py` | Shared helpers (retry, polling, error handling) |
 
 All scripts use `uv run` (inline dependencies, no install needed).
 
-## Pipeline Examples
+## Documentation
 
-Chain steps together — generate, enhance, animate:
+- **[SKILL.md](SKILL.md)** — Full reference: models, parameters, pipelines, error handling
+- **[COOKBOOK.md](COOKBOOK.md)** — 5 real-world recipes: ad campaigns, brand LoRA training, product-to-video pipelines, storyboard production, creative iteration
+
+## Quick Examples
 
 ```bash
-uv run scripts/pipeline.py --pipeline pipeline.json
-uv run scripts/pipeline.py --pipeline pipeline.json --dry-run          # estimate CU cost
-uv run scripts/pipeline.py --pipeline pipeline.json --resume           # resume interrupted run
-uv run scripts/pipeline.py --pipeline template.json --var subject="cat" --var style="cinematic"
-```
+# Generate an image
+uv run scripts/generate_image.py --prompt "A cyberpunk cat" --filename "cat.png" --model flux
 
-See `SKILL.md` for full pipeline documentation and examples.
+# Generate a video with audio
+uv run scripts/generate_video.py --prompt "Ocean waves at sunset" --filename "waves.mp4" --model veo-3 --generate-audio
+
+# Upscale to 4K
+uv run scripts/enhance_image.py --image-url "https://..." --filename "upscaled.png" --width 4096 --height 4096
+
+# Run a multi-step pipeline
+uv run scripts/pipeline.py --pipeline pipeline.json --dry-run
+```
 
 ## API Key
 
 Get your token at [krea.ai/settings/api-tokens](https://krea.ai/settings/api-tokens). Set as `KREA_API_TOKEN` environment variable or pass `--api-key` to any script.
+
+## License
+
+MIT

@@ -1,0 +1,16 @@
+{
+  "name": "krea-ai-skill",
+  "metadata": {
+    "description": "Generate images, videos, upscale, and train LoRA styles with 20+ AI models via the Krea.ai API",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "krea-ai",
+      "description": "Generate images, videos, upscale/enhance images, and train LoRA styles using the Krea.ai API. 20+ image models, 7 video models, 3 upscalers, multi-step pipelines.",
+      "source": "./",
+      "strict": false,
+      "skills": ["."]
+    }
+  ]
+}

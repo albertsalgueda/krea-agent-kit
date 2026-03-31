@@ -1,3 +1,9 @@
+---
+name: krea-ai
+description: "Generate images, videos, upscale/enhance images, and train LoRA styles using the Krea.ai API. Supports 20+ image models (Flux, Imagen, GPT Image, Ideogram, Seedream), 7 video models (Kling, Veo, Hailuo, Wan), and 3 upscalers (Topaz up to 22K). Use when the user wants to generate images, create videos, upscale images, train custom LoRA styles, or run multi-step creative pipelines."
+license: MIT
+---
+
 # Krea AI — Image, Video & Enhancement Generation
 
 Generate images, videos, upscale/enhance images, and train LoRA styles using the Krea.ai API. Supports 20+ image models (Flux, Imagen, GPT Image, Ideogram, Seedream...), 7 video models (Kling, Veo, Hailuo, Wan), and 3 upscalers (Topaz up to 22K).
@@ -6,36 +12,36 @@ Generate images, videos, upscale/enhance images, and train LoRA styles using the
 
 ## Usage
 
-Run scripts using absolute path (do NOT cd to skill directory first):
+Scripts are in the `scripts/` directory alongside this file. Run them with `uv run` from the user's working directory so output files are saved where the user expects.
 
 **Generate image:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "your description" --filename "output.png" [--model flux] [--width 1024] [--height 1024] [--api-key KEY]
+uv run scripts/generate_image.py --prompt "your description" --filename "output.png" [--model flux] [--width 1024] [--height 1024] [--api-key KEY]
 ```
 
 **Generate video:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/generate_video.py --prompt "your description" --filename "output.mp4" [--model kling-2.5] [--duration 5] [--aspect-ratio 16:9] [--api-key KEY]
+uv run scripts/generate_video.py --prompt "your description" --filename "output.mp4" [--model kling-2.5] [--duration 5] [--aspect-ratio 16:9] [--api-key KEY]
 ```
 
 **Enhance/upscale image:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "https://..." --filename "upscaled.png" --width 4096 --height 4096 [--enhancer topaz] [--api-key KEY]
+uv run scripts/enhance_image.py --image-url "https://..." --filename "upscaled.png" --width 4096 --height 4096 [--enhancer topaz] [--api-key KEY]
 ```
 
 **List available models:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/list_models.py [--type image|video|enhance]
+uv run scripts/list_models.py [--type image|video|enhance]
 ```
 
 **Run a multi-step pipeline:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/pipeline.py --pipeline pipeline.json [--api-key KEY]
+uv run scripts/pipeline.py --pipeline pipeline.json [--api-key KEY]
 ```
 
 **Check job status:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/get_job.py --job-id "uuid" [--api-key KEY]
+uv run scripts/get_job.py --job-id "uuid" [--api-key KEY]
 ```
 
 **Important:** Always run from the user's current working directory so files are saved where the user is working.
@@ -46,14 +52,14 @@ Goal: fast iteration without burning CU on expensive models until the prompt is 
 
 - **Draft (cheap/fast):** use `--model z-image` or `--model flux` (3-5 CU, ~5s)
   ```bash
-  uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "<draft prompt>" --filename "yyyy-mm-dd-hh-mm-ss-draft.png" --model flux
+  uv run scripts/generate_image.py --prompt "<draft prompt>" --filename "yyyy-mm-dd-hh-mm-ss-draft.png" --model flux
   ```
 
 - **Iterate:** adjust prompt, keep trying with cheap models
 
 - **Final (high quality):** switch to `--model gpt-image` or `--model nano-banana-pro`
   ```bash
-  uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "<final prompt>" --filename "yyyy-mm-dd-hh-mm-ss-final.png" --model nano-banana-pro
+  uv run scripts/generate_image.py --prompt "<final prompt>" --filename "yyyy-mm-dd-hh-mm-ss-final.png" --model nano-banana-pro
   ```
 
 ## Image Models (sorted by cost)
@@ -220,32 +226,32 @@ Preserve user's creative intent in all cases.
 
 **Quick draft image:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "A serene Japanese garden with cherry blossoms" --filename "2025-11-23-14-23-05-japanese-garden.png" --model flux
+uv run scripts/generate_image.py --prompt "A serene Japanese garden with cherry blossoms" --filename "2025-11-23-14-23-05-japanese-garden.png" --model flux
 ```
 
 **High quality final:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "A serene Japanese garden with cherry blossoms, golden hour lighting" --filename "2025-11-23-14-25-30-japanese-garden-final.png" --model nano-banana-pro --resolution 4K
+uv run scripts/generate_image.py --prompt "A serene Japanese garden with cherry blossoms, golden hour lighting" --filename "2025-11-23-14-25-30-japanese-garden-final.png" --model nano-banana-pro --resolution 4K
 ```
 
 **Image-to-image edit:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/generate_image.py --prompt "transform to watercolor painting style" --filename "2025-11-23-14-30-00-watercolor.png" --image-url "https://example.com/photo.jpg" --model nano-banana-pro
+uv run scripts/generate_image.py --prompt "transform to watercolor painting style" --filename "2025-11-23-14-30-00-watercolor.png" --image-url "https://example.com/photo.jpg" --model nano-banana-pro
 ```
 
 **Generate video:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/generate_video.py --prompt "A majestic eagle soaring over snow-capped mountains at sunrise" --filename "2025-11-23-15-00-00-eagle-mountains.mp4" --model veo-3 --duration 8 --generate-audio
+uv run scripts/generate_video.py --prompt "A majestic eagle soaring over snow-capped mountains at sunrise" --filename "2025-11-23-15-00-00-eagle-mountains.mp4" --model veo-3 --duration 8 --generate-audio
 ```
 
 **Upscale image to 4K:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/enhance_image.py --image-url "https://example.com/photo.jpg" --filename "2025-11-23-15-10-00-upscaled.png" --width 4096 --height 4096 --enhancer topaz
+uv run scripts/enhance_image.py --image-url "https://example.com/photo.jpg" --filename "2025-11-23-15-10-00-upscaled.png" --width 4096 --height 4096 --enhancer topaz
 ```
 
 **List models:**
 ```bash
-uv run ~/.codex/skills/krea/scripts/list_models.py --type image
+uv run scripts/list_models.py --type image
 ```
 
 ## Pipelines (Multi-Step Workflows)
@@ -320,7 +326,7 @@ Generate a concept image, create 4 angle variations, then animate each one:
 
 Run it:
 ```bash
-uv run ~/.codex/skills/krea/scripts/pipeline.py --pipeline car-pipeline.json
+uv run scripts/pipeline.py --pipeline car-pipeline.json
 ```
 
 ### Example: Generate → Upscale → Animate with Audio
@@ -399,7 +405,7 @@ Generate hero shot → 4 style variations → upscale all:
 
 For quick pipelines, pass JSON directly:
 ```bash
-uv run ~/.codex/skills/krea/scripts/pipeline.py --pipeline '{"steps":[{"action":"generate_image","model":"flux","prompt":"a cat astronaut","filename":"cat"},{"action":"enhance","use_previous":true,"enhancer":"topaz","width":4096,"height":4096,"filename":"cat-4k"}]}'
+uv run scripts/pipeline.py --pipeline '{"steps":[{"action":"generate_image","model":"flux","prompt":"a cat astronaut","filename":"cat"},{"action":"enhance","use_previous":true,"enhancer":"topaz","width":4096,"height":4096,"filename":"cat-4k"}]}'
 ```
 
 ### Building Pipelines for Users
@@ -422,7 +428,7 @@ When a user asks for something complex like "generate a product shot from 4 angl
 
 **Template variables** — Use `{{variable}}` in pipeline JSON and pass values at runtime:
 ```bash
-uv run ~/.codex/skills/krea/scripts/pipeline.py --pipeline template.json --var subject="red sports car" --var style="cinematic"
+uv run scripts/pipeline.py --pipeline template.json --var subject="red sports car" --var style="cinematic"
 ```
 Pipeline JSON can then use `{{subject}}` and `{{style}}` anywhere in prompts, filenames, etc. All variables must be provided or the pipeline exits with an error.
 
